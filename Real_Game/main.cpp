@@ -1,12 +1,11 @@
 #include <SFML/Graphics.hpp>
+#include "GameMap.h" // <--- อย่าลืม include ตัวนี้
 
 int main() {
-    // สร้างหน้าต่างขนาด 200x200
-    sf::RenderWindow window(sf::VideoMode(200, 200), "SFML Works!");
+    sf::RenderWindow window(sf::VideoMode(1080, 720), "Hexa-Conquest");
 
-    // สร้างวงกลมสีเขียว
-    sf::CircleShape shape(100.f);
-    shape.setFillColor(sf::Color::Green);
+    // 1. สร้าง Map แค่บรรทัดเดียว! (ขนาด 20 แถว x 25 คอลัมน์)
+    GameMap worldMap(20, 25);
 
     while (window.isOpen()) {
         sf::Event event;
@@ -15,8 +14,11 @@ int main() {
                 window.close();
         }
 
-        window.clear();
-        window.draw(shape);
+        window.clear(sf::Color(20, 20, 30)); // พื้นหลังสีน้ำเงินเข้มๆ เหมือนอวกาศ
+
+        // 2. สั่งวาด Map แค่บรรทัดเดียว!
+        worldMap.draw(window);
+
         window.display();
     }
 
