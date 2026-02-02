@@ -5,7 +5,7 @@
 #include "MouseUI.h" // <--- USER INTERFACE MOUSE (PLAY)
 
 int main() {
-    // กำหนดค่าการลบรอยหยัก (Antialiasing) เพื่อให้ขอบหกเหลี่ยมคมชัดขึ้น
+    // กำหนดค่าการลบรอยหยัก (Antialiasing) เพื่อให้ขอบหกเหลี่ยมคมชัดขึ้น (PLAY)
     sf::ContextSettings settings;
     settings.antialiasingLevel = 8;
 
@@ -17,11 +17,11 @@ int main() {
     GameMap worldMap(20, 25);
 
     while (window.isOpen()) {
-        sf::Event event;
 
         // --- จุดสำคัญ: อัปเดตตำแหน่งเมาส์ทุกเฟรม ---
         // ใช้ mapPixelToCoords เพื่อให้พิกัดเมาส์แม่นยำแม้จะมีการย่อขยายหน้าต่าง
         sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+        sf::Event event;
 
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed)
