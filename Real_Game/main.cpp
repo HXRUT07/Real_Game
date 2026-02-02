@@ -1,5 +1,6 @@
 #include <SFML/Graphics.hpp>
 #include "GameMap.h" // <--- อย่าลืม include ตัวนี้
+#include "MouseUI.h"
 
 int main() {
     sf::RenderWindow window(sf::VideoMode(1080, 720), "Hexa-Conquest");
