@@ -1,4 +1,4 @@
-#pragma once
+﻿#pragma once
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <cmath>
@@ -9,13 +9,14 @@ enum class TerrainType {
     Grass,
     Water,
     Mountain,
-    Forest // <--- ������������
+    Forest // <--- à¾ÔèÁ»èÒà¢éÒÁÒ
 };
 
 struct HexTile {
     sf::ConvexShape shape;
-    int gridR, gridC;
-    TerrainType type;
+    int gridR, gridC = 0;
+    TerrainType type = TerrainType::Grass;
+    bool isHovered = false; // <--- เพิ่มไว้เช็คสถานะเมาส์ชี้
 };
 
 class GameMap {
@@ -26,7 +27,7 @@ private:
 
     sf::ConvexShape createHexShape(float x, float y, TerrainType type);
 
-    // <--- �����ѧ��ѹ��ǹ��� (Private Helper)
+    // <--- à¾ÔèÁ¿Ñ§¡ìªÑ¹ÊèÇ¹µÑÇ (Private Helper)
     void generateTerrain(TerrainType type, int numClusters, int clusterSize);
     void updateColors();
 
@@ -34,5 +35,9 @@ public:
     GameMap(int r, int c);
     void draw(sf::RenderWindow& window);
 
-    // Helper function ����Ѻ���͹��ҹ (��Ҩз����������������ѧ)
+    // Helper function ÊÓËÃÑºà¾×èÍ¹ºéÒ¹ (¶éÒ¨Ð·Óà´ÕëÂÇÁÒà¾ÔèÁ·ÕËÅÑ§)
+
+    // <--- ฟังก์ชันหัวใจหลักสำหรับระบบ Highlight
+    void updateHighlight(sf::Vector2f mousePos);
+
 };
