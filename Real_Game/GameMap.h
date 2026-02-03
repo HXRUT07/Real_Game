@@ -3,48 +3,69 @@
 #include <vector>
 #include <cmath>
 
+// ขนาดของ Hexagon
 const float HEX_SIZE = 30.0f;
 
+// ประเภทของพื้นที่
 enum class TerrainType {
     Grass,
     Water,
     Mountain,
-    Forest // <--- เพิ่มป่าเข้ามา
+    Forest
 };
 
+// โครงสร้างข้อมูลของแต่ละช่อง
 struct HexTile {
     sf::ConvexShape shape;
-    int gridR, gridC = 0;
+    int gridR = 0, gridC = 0;
     TerrainType type = TerrainType::Grass;
-    bool isHovered = false; // <--- เพิ่มไว้เช็คสถานะเมาส์ชี้
 
-    // <--- [FOG] เพิ่มตัวแปรเช็คว่าเปิดแมพหรือยัง (เริ่มต้นเป็น false คือมืด)
-    bool isExplored = false;
+    bool isHovered = false;   // สถานะเมาส์ชี้ (กรอบขาว)
+    bool isExplored = false;  // สถานะหมอก (false = มืด/มองไม่เห็น)
 };
 
 class GameMap {
+public:
+    // Constructor
+    GameMap(int r, int c);
+
+    // ฟังก์ชันวาดและอัปเดตพื้นฐาน
+    void draw(sf::RenderWindow& window);
+    void updateHighlight(sf::Vector2f mousePos);
+
+    // [ใหม่] ฟังก์ชันรับการคลิกจาก Main (เพื่อเลือกจุดเกิด)
+    void handleMouseClick(sf::Vector2f mousePos);
+
+    // [ใหม่] เช็คว่าเกมเริ่มหรือยัง (Main อาจจะอยากรู้)
+    bool isGameStarted() const { return m_gameStarted; }
+
 private:
+    // ตัวแปรเก็บข้อมูล
     std::vector<HexTile> tiles;
     int rows;
     int cols;
 
+    // [ใหม่] ตัวแปรเช็คสถานะ (True = เลือกจุดเกิดแล้ว/กำลังเล่น, False = รอเลือกจุดเกิด)
+    bool m_gameStarted = false;
+
+    // Helper: สร้างรูปทรงหกเหลี่ยม
     sf::ConvexShape createHexShape(float x, float y, TerrainType type);
 
-    // ต้องมีบรรทัดนี้:
+    // Helper: สร้างก้อนทรัพยากร (ใช้สร้างป่า/เขา เป็นกลุ่มๆ)
     void createCluster(TerrainType type, int startR, int startC, int clusterSize);
+
+    // Helper: อัปเดตสี (เรียกเมื่อมีการเปลี่ยนแปลง Type หรือ เปิดหมอก)
     void updateColors();
 
-public:
-    GameMap(int r, int c);
-    void draw(sf::RenderWindow& window);
+    // Helper: เปิดหมอก (Fog of War)
+    void revealFog(int centerR, int centerC, int radius);
 
-    // Helper function สำหรับเพื่อนบ้าน (ถ้าจะทำเดี๋ยวมาเพิ่มทีหลัง)
+    // [ใหม่] ฟังก์ชันเริ่มเกมจริง (ถูกเรียกจาก handleMouseClick)
+    void startGame(int spawnR, int spawnC);
 
-    // <--- ฟังก์ชันหัวใจหลักสำหรับระบบ Highlight
-    void updateHighlight(sf::Vector2f mousePos);
+    // [ใหม่] สุ่มทรัพยากรทั้งโลก (Sector Based)
+    void generateWorldResources();
 
-    // <--- [FOG] เพิ่มฟังก์ชันสำหรับเปิดหมอก
-    // รับพิกัด (r, c) และรัศมี (radius) ที่จะเปิด
-    void revealFog(int r, int c, int radius);
-
+    // [ใหม่] เสกทรัพยากรการันตีรอบตัวจุดเกิด (Starter Pack)
+    void spawnStarterResources(int r, int c);
 };
