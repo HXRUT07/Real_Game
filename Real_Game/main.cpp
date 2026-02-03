@@ -34,7 +34,7 @@ int main() {
             camera.handleEvent(event, window);
 
             // -----------------------------------------------------------------------
-            // [NEW] เพิ่มส่วนตรวจสอบการคลิกซ้าย เพื่อเลือกจุดเกิด (Spawn Selection)
+            // เพิ่มส่วนตรวจสอบการคลิกซ้าย เพื่อเลือกจุดเกิด (Spawn Selection)
             // -----------------------------------------------------------------------
             if (event.type == sf::Event::MouseButtonPressed) {
                 if (event.mouseButton.button == sf::Mouse::Left) {
