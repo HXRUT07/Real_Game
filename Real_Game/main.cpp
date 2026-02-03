@@ -15,14 +15,17 @@ int main() {
     sf::ContextSettings settings;
     settings.antialiasingLevel = 8;
 
-    sf::RenderWindow window(sf::VideoMode(1080, 720), "Hexa-Conquest", sf::Style::Default, settings);
+    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Hexa-Conquest", sf::Style::Fullscreen, settings);
+
+    // (แถม) จำกัดเฟรมเรตหน่อย เครื่องจะได้ไม่ทำงานหนักเกินไปตอน Fullscreen
+    window.setFramerateLimit(60);
 
     //----Map system----//(Yu)
     // 1. สร้าง Map แค่บรรทัดเดียว!
     GameMap worldMap(50, 50);
 
     // 2. สร้าง Object กล้อง
-    GameCamera camera(1080, 720);
+    GameCamera camera(window.getSize().x, window.getSize().y);
 
     MouseUI gui; //(PLAY)
 
@@ -33,6 +36,10 @@ int main() {
 
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed)
+                window.close();
+
+            // กด Escape เพื่อออกจากเกมได้ (สำคัญมากตอนเทส Fullscreen ไม่งั้นออกยาก)
+            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)
                 window.close();
 
             // 3. ส่ง Event ให้กล้องจัดการ (คลิก/ปล่อย/หมุนล้อ)
