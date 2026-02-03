@@ -140,7 +140,8 @@ sf::ConvexShape GameMap::createHexShape(float x, float y, TerrainType type) {
     else if (type == TerrainType::Mountain) hex.setFillColor(sf::Color(120, 120, 120)); // เทา
 
     hex.setOutlineColor(sf::Color(30, 30, 30)); // ขอบดำจางๆ
-    hex.setOutlineThickness(2.0f);
+    hex.setOutlineThickness(-1.0f);
+    hex.setOutlineColor(sf::Color::Transparent);
 
     return hex;
 }
@@ -153,16 +154,19 @@ void GameMap::draw(sf::RenderWindow& window) {
 
     // รอบที่ 2: วาด Highlight
     for (const auto& tile : tiles) {
-        // เพิ่มเงื่อนไข && tile.isExplored เข้าไป
-        // ต้องเมาส์ชี้ AND ต้องเปิดแมพแล้ว ถึงจะขึ้นกรอบขาว
-        if (tile.isHovered && tile.isExplored) {
-            sf::ConvexShape highlightShape = tile.shape;
-            highlightShape.setOutlineColor(sf::Color::White);
-            highlightShape.setOutlineThickness(4.0f);
-            // ต้องทำให้ไส้ในโปร่งใส ไม่งั้นสีขาวจะบังสีดำ/สีเขียวเดิม
-            highlightShape.setFillColor(sf::Color::Transparent);
+        if (tile.isHovered) {
+            sf::ConvexShape highlight = tile.shape; // ก๊อปปี้ Shape เดิมมาเป๊ะๆ
 
-            window.draw(highlightShape);
+            // --- สูตรสำเร็จให้ขอบขาวเนียน ---
+            highlight.setFillColor(sf::Color::Transparent); // ทำให้ข้างในใส จะได้ไม่ทับสี Terrain
+            highlight.setOutlineColor(sf::Color::White);     // ตั้งขอบเป็นสีขาว
+
+            // ใช้ค่าลบที่ "หนาขึ้น" (เช่น -4.0f หรือ -5.0f)
+            // ยิ่งค่าลบมาก เส้นขาวจะยิ่งขยับเข้าหาจุดศูนย์กลางช่อง 
+            // ทำให้เหลือพื้นที่ขอบนอกสุดให้ "เส้นสีดำ" เดิมโชว์ออกมาได้ครับ
+            highlight.setOutlineThickness(-4.0f);
+
+            window.draw(highlight); // วาดทับเป็น Layer สุดท้าย
             break;
         }
     }

@@ -28,8 +28,13 @@ int main() {
     // 2. สร้าง Object กล้อง
     GameCamera camera(1080, 720);
 
+    MouseUI gui; //(PLAY)
+
     while (window.isOpen()) {
+
+        sf::Vector2f mousePosScreen = window.mapPixelToCoords(sf::Mouse::getPosition(window));
         sf::Event event;
+
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed)
                 window.close();
@@ -45,6 +50,18 @@ int main() {
                     worldMap.revealFog(r, c, 3); // เปิดหมอกตรงจุดที่สุ่มได้
                 }
             }
+
+            if (event.type == sf::Event::MouseButtonPressed) {
+                if (event.mouseButton.button == sf::Mouse::Right) {
+                    // เรียกใช้แถบข้อมูลเมื่อคลิกขวา
+                    gui.showInfo(mousePosScreen, "Zone Information", "Type: Grassland\nYield: +2 Food");
+                }
+                else if (event.mouseButton.button == sf::Mouse::Left) {
+                    // คลิกซ้ายเพื่อซ่อน (เลือกอย่างใดอย่างหนึ่ง)
+                    gui.hideInfo();
+                }
+            }
+
         }
 
         // 4. อัปเดตกล้อง (คำนวณการเลื่อน)
@@ -59,11 +76,16 @@ int main() {
         sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window), camera.getView());
         // เราจะส่ง mousePos ไปให้ worldMap ตรวจสอบว่าชี้ที่ช่องไหน
         worldMap.updateHighlight(mousePos);
+        gui.update(mousePosScreen, 100, 50);
 
         window.clear(sf::Color(20, 20, 30)); // พื้นหลังสีน้ำเงินเข้มๆ เหมือนอวกาศ
 
         // สั่งวาด Map แค่บรรทัดเดียว!
+        window.setView(camera.getView()); // ใช้ View กล้องวาดแมพ
         worldMap.draw(window);
+
+        window.setView(window.getDefaultView()); // คืนค่า View ปกติเพื่อวาด UI ทับข้างบนสุด
+        gui.draw(window);
 
         window.display();
     }

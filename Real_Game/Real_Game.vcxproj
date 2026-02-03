@@ -136,6 +136,7 @@
     <ClCompile Include="GameCamera.cpp" />
     <ClCompile Include="GameMap.cpp" />
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="MouseUI.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameCamera.h" />
