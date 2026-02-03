@@ -34,7 +34,7 @@ int main() {
 
         window.clear(sf::Color(20, 20, 30)); // พื้นหลังสีน้ำเงินเข้มๆ เหมือนอวกาศ
 
-        // 2. สั่งวาด Map แค่บรรทัดเดียว!
+        // สั่งวาด Map แค่บรรทัดเดียว!
         worldMap.draw(window);
 
         window.display();
