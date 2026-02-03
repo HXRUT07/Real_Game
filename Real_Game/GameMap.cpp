@@ -251,8 +251,15 @@ sf::ConvexShape GameMap::createHexShape(float x, float y, TerrainType type) {
         float rad = angle * (PI / 180.0f);
         hex.setPoint(i, sf::Vector2f(x + HEX_SIZE * cos(rad), y + HEX_SIZE * sin(rad)));
     }
-    hex.setFillColor(sf::Color::White);
-    hex.setOutlineThickness(2.0f);
+
+    // กำหนดสีตามประเภทพื้นที่
+    if (type == TerrainType::Grass) hex.setFillColor(sf::Color(100, 200, 100)); // เขียว
+    else if (type == TerrainType::Water) hex.setFillColor(sf::Color(50, 100, 200)); // ฟ้า
+    else if (type == TerrainType::Mountain) hex.setFillColor(sf::Color(120, 120, 120)); // เทา
+
+    hex.setOutlineColor(sf::Color(30, 30, 30)); // ขอบดำจางๆ
+    hex.setOutlineThickness(-1.0f);
+
     return hex;
 }
 
@@ -261,16 +268,16 @@ void GameMap::draw(sf::RenderWindow& window) {
         window.draw(tile.shape);
     }
     for (const auto& tile : tiles) {
-        // ต้องเมาส์ชี้ และ ต้องเปิดแมพแล้ว ถึงจะขึ้นกรอบ
-        // หรือ ถ้ายังไม่เริ่มเกม (เลือกจุดเกิด) ก็ให้ขึ้นกรอบได้เลย
-        bool showHighlight = tile.isHovered && (tile.isExplored || !m_gameStarted);
+        // เพิ่มเงื่อนไข && tile.isExplored เข้าไป
+        // ต้องเมาส์ชี้ AND ต้องเปิดแมพแล้ว ถึงจะขึ้นกรอบขาว
+        if (tile.isHovered && tile.isExplored) {
+            sf::ConvexShape highlightShape = tile.shape;
+            highlightShape.setOutlineColor(sf::Color::White);
+            highlightShape.setOutlineThickness(4.0f);
+            // ต้องทำให้ไส้ในโปร่งใส ไม่งั้นสีขาวจะบังสีดำ/สีเขียวเดิม
+            highlightShape.setFillColor(sf::Color::Transparent);
 
-        if (showHighlight) {
-            sf::ConvexShape h = tile.shape;
-            h.setOutlineColor(sf::Color::White);
-            h.setOutlineThickness(4.0f);
-            h.setFillColor(sf::Color::Transparent);
-            window.draw(h);
+            window.draw(highlightShape);
             break;
         }
     }
