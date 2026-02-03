@@ -21,12 +21,18 @@
     <ClCompile Include="GameMap.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="GameCamera.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameMap.h">
       <Filter>Header Files</Filter>
     </ClInclude>
     <ClInclude Include="MouseUI.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="GameCamera.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

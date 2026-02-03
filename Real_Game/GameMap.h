@@ -17,6 +17,9 @@ struct HexTile {
     int gridR, gridC = 0;
     TerrainType type = TerrainType::Grass;
     bool isHovered = false; // <--- เพิ่มไว้เช็คสถานะเมาส์ชี้
+
+    // <--- [FOG] เพิ่มตัวแปรเช็คว่าเปิดแมพหรือยัง (เริ่มต้นเป็น false คือมืด)
+    bool isExplored = false;
 };
 
 class GameMap {
@@ -39,5 +42,9 @@ public:
 
     // <--- ฟังก์ชันหัวใจหลักสำหรับระบบ Highlight
     void updateHighlight(sf::Vector2f mousePos);
+
+    // <--- [FOG] เพิ่มฟังก์ชันสำหรับเปิดหมอก
+    // รับพิกัด (r, c) และรัศมี (radius) ที่จะเปิด
+    void revealFog(int r, int c, int radius);
 
 };
