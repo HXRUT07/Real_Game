@@ -18,12 +18,8 @@ int main() {
     sf::RenderWindow window(sf::VideoMode(1080, 720), "Hexa-Conquest", sf::Style::Default, settings);
 
     //----Map system----//(Yu)
-    // 1. สร้าง Map แค่บรรทัดเดียว! (ขนาด 20 แถว x 25 คอลัมน์)
-    GameMap worldMap(30, 30);
-
-    // [FOG SYSTEM] เปิดแมพจุดเริ่มต้นทันที! 
-    // ไม่งั้นเข้าเกมมาจะมืดหมด (เปิดที่พิกัด 0,0 รัศมี 4 ช่อง)
-    worldMap.revealFog(0, 0, 4);
+    // 1. สร้าง Map แค่บรรทัดเดียว!
+    GameMap worldMap(50, 50);
 
     // 2. สร้าง Object กล้อง
     GameCamera camera(1080, 720);
@@ -42,12 +38,28 @@ int main() {
             // 3. ส่ง Event ให้กล้องจัดการ (คลิก/ปล่อย/หมุนล้อ)
             camera.handleEvent(event, window);
 
+            // -----------------------------------------------------------------------
+            // [NEW] เพิ่มส่วนตรวจสอบการคลิกซ้าย เพื่อเลือกจุดเกิด (Spawn Selection)
+            // -----------------------------------------------------------------------
+            if (event.type == sf::Event::MouseButtonPressed) {
+                if (event.mouseButton.button == sf::Mouse::Left) {
+                    // 1. ดึงตำแหน่งเมาส์บนหน้าจอ
+                    sf::Vector2i pixelPos = sf::Mouse::getPosition(window);
+
+                    // 2. แปลงเป็นตำแหน่งในโลกเกม (World Coords) โดยอิงตามกล้อง
+                    sf::Vector2f worldPos = window.mapPixelToCoords(pixelPos, camera.getView());
+
+                    // 3. ส่งให้ GameMap จัดการ (ถ้ายังไม่เริ่มเกม มันจะใช้เลือกจุดเกิด)
+                    worldMap.handleMouseClick(worldPos);
+                }
+            }
+            // -----------------------------------------------------------------------
+
             // [DEBUG / TEST] กดปุ่ม Spacebar เพื่อสุ่มเปิดแมพ (ไว้เทสว่าระบบทำงานไหม)
             if (event.type == sf::Event::KeyPressed) {
                 if (event.key.code == sf::Keyboard::Space) {
                     int r = std::rand() % 30;
                     int c = std::rand() % 30;
-                    worldMap.revealFog(r, c, 3); // เปิดหมอกตรงจุดที่สุ่มได้
                 }
             }
 
@@ -89,14 +101,6 @@ int main() {
 
         window.display();
     }
-
-    //--------------(เพลย์)----------------//
-
-    //--------------(เปรม)----------------//
-
-    //--------------(ปลื้ม)----------------//
-
-    //--------------(อาฉะ)----------------//
 
     return 0;
 }
