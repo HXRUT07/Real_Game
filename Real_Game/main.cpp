@@ -66,7 +66,7 @@ int main() {
             if (event.type == sf::Event::MouseButtonPressed) {
                 if (event.mouseButton.button == sf::Mouse::Right) {
                     // เรียกใช้แถบข้อมูลเมื่อคลิกขวา
-                    gui.showInfo(mousePosScreen, "Zone Information", "Type: Grassland\nYield: +2 Food");
+                    gui.showResourcePanel(mousePosScreen, 100, 50, 30);
                 }
                 else if (event.mouseButton.button == sf::Mouse::Left) {
                     // คลิกซ้ายเพื่อซ่อน (เลือกอย่างใดอย่างหนึ่ง)
@@ -88,7 +88,7 @@ int main() {
         sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window), camera.getView());
         // เราจะส่ง mousePos ไปให้ worldMap ตรวจสอบว่าชี้ที่ช่องไหน
         worldMap.updateHighlight(mousePos);
-        gui.update(mousePosScreen, 100, 50);
+        gui.update(mousePosScreen);
 
         window.clear(sf::Color(20, 20, 30)); // พื้นหลังสีน้ำเงินเข้มๆ เหมือนอวกาศ
 

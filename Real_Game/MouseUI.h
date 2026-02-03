@@ -5,18 +5,19 @@
 class MouseUI {
 private:
     sf::Font font;
-    sf::Text infoText;
+    bool hasFont;
+    bool isPanelVisible;
 
     // --- ส่วนที่เพิ่มสำหรับระบบคลิกขวา ---
     sf::RectangleShape infoPanel;
     sf::Text infoContent;
-    bool isPanelVisible;
-    bool hasFont;
 
 public:
     MouseUI(); // Constructor สำหรับโหลดฟอนต์
-    void update(sf::Vector2f mousePos, int gold, int wood); // อัปเดตข้อความตามเมาส์
-    void showInfo(sf::Vector2f position, std::string title, std::string detail); // เปิดแถบข้อมูล
-    void hideInfo(); // ปิดแถบข้อมูล
-    void draw(sf::RenderWindow& window); // วาด UI ลงหน้าจอ
+
+    void showResourcePanel(sf::Vector2f position, int gold, int wood, int food);
+    void hideInfo();
+
+    void update(sf::Vector2f mousePos);
+    void draw(sf::RenderWindow& window);
 };
