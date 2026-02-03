@@ -32,7 +32,7 @@ GameMap::GameMap(int r, int c) {
             tile.type = TerrainType::Grass;
 
             // [TRICK] ให้เป็น True ไว้ก่อน เพื่อให้ผู้เล่นเห็นกระดานเปล่าๆ ตอนเลือกจุด
-            tile.isExplored = true;
+            tile.isExplored = false;
 
             tiles.push_back(tile);
         }
