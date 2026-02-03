@@ -37,13 +37,16 @@ GameMap::GameMap(int r, int c) {
     }
 
     // 3. เริ่มกระบวนการสร้างโลก (World Generation)
-    generateTerrain(TerrainType::Water, 3, 40);    // ทะเลสาบ 3 แห่ง แห่งละ 40 ช่อง
-    generateTerrain(TerrainType::Mountain, 4, 30); // ภูเขา 4 ก้อน ก้อนละ 30 ช่อง
-    generateTerrain(TerrainType::Forest, 6, 25);   // ป่า 6 ผืน ผืนละ 25 ช่อง
+    generateTerrain(TerrainType::Water, 4, 40);    // ทะเลสาบ 3 แห่ง แห่งละ 40 ช่อง
+    generateTerrain(TerrainType::Mountain, 5, 30); // ภูเขา 4 ก้อน ก้อนละ 30 ช่อง
+    generateTerrain(TerrainType::Forest, 7, 25);   // ป่า 6 ผืน ผืนละ 25 ช่อง
 
     // 4. อัปเดตสีใหม่ตามประเภทที่สุ่มได้
     // (เพราะตอนแรกเราสร้าง Shape เป็นสีเขียวหมด เราต้องมาทาสีทับใหม่)
     updateColors();
+
+    // [เพิ่ม] เปิดแมพตรงกลางหรือจุดเริ่มเกม (เช่น แถว 0 หลัก 0)
+    revealFog(0, 0, 3);
 }
 
 // ฟังก์ชัน "เดินสุ่ม" (Random Walk) เพื่อสร้างกลุ่มก้อนที่ต่อเนื่องกัน
@@ -99,16 +102,22 @@ void GameMap::generateTerrain(TerrainType type, int numClusters, int clusterSize
 
 void GameMap::updateColors() {
     for (auto& tile : tiles) {
-        // เรียกใช้ฟังก์ชันเดิม แต่ส่ง Type ใหม่เข้าไปเพื่อเอาสี
-        // วิธีนี้อาจจะไม่ Efficient มาก แต่เขียนง่ายสุดสำหรับตอนนี้
+        if (!tile.isExplored) {
+            // --- กรณี: ยังไม่เปิดแมพ (FOG) ---
+            tile.shape.setFillColor(sf::Color(10, 10, 10)); // สีดำเกือบสนิท
+            tile.shape.setOutlineColor(sf::Color(20, 20, 20)); // ขอบสีเทาเข้มมาก
+        }
+        else {
+            // --- กรณี: เปิดแมพแล้ว (เหมือนเดิม) ---
+            sf::Color color;
+            if (tile.type == TerrainType::Grass) color = sf::Color(100, 200, 100);
+            else if (tile.type == TerrainType::Water) color = sf::Color(50, 100, 200);
+            else if (tile.type == TerrainType::Mountain) color = sf::Color(120, 120, 120);
+            else if (tile.type == TerrainType::Forest) color = sf::Color(34, 139, 34);
 
-        sf::Color color;
-        if (tile.type == TerrainType::Grass) color = sf::Color(100, 200, 100);
-        else if (tile.type == TerrainType::Water) color = sf::Color(50, 100, 200);
-        else if (tile.type == TerrainType::Mountain) color = sf::Color(120, 120, 120);
-        else if (tile.type == TerrainType::Forest) color = sf::Color(34, 139, 34); // สีเขียวเข้มป่าไม้
-
-        tile.shape.setFillColor(color);
+            tile.shape.setFillColor(color);
+            tile.shape.setOutlineColor(sf::Color(30, 30, 30)); // ขอบดำปกติ
+        }
     }
 }
 
@@ -137,19 +146,24 @@ sf::ConvexShape GameMap::createHexShape(float x, float y, TerrainType type) {
 }
 
 void GameMap::draw(sf::RenderWindow& window) {
-    // รอบที่ 1: วาดทุกช่อง (Grass, Water, Mountain, Forest) ตามปกติ (PLAY)
+    // รอบที่ 1: วาดพื้นหลัง (เหมือนเดิม)
     for (const auto& tile : tiles) {
         window.draw(tile.shape);
     }
 
-    // รอบที่ 2: วนหาช่องที่โดน Highlight แล้ววาดทับข้างบนสุดเพียงช่องเดียว
+    // รอบที่ 2: วาด Highlight
     for (const auto& tile : tiles) {
-        if (tile.isHovered) {
-            sf::ConvexShape highlightShape = tile.shape; // สร้างตัวสำรองมาวาด
-            highlightShape.setOutlineColor(sf::Color::White); // ขอบสีขาว
-            highlightShape.setOutlineThickness(4.0f);           // ความหนาพิเศษเพื่อให้เห็นเต็มช่อง
+        // เพิ่มเงื่อนไข && tile.isExplored เข้าไป
+        // ต้องเมาส์ชี้ AND ต้องเปิดแมพแล้ว ถึงจะขึ้นกรอบขาว
+        if (tile.isHovered && tile.isExplored) {
+            sf::ConvexShape highlightShape = tile.shape;
+            highlightShape.setOutlineColor(sf::Color::White);
+            highlightShape.setOutlineThickness(4.0f);
+            // ต้องทำให้ไส้ในโปร่งใส ไม่งั้นสีขาวจะบังสีดำ/สีเขียวเดิม
+            highlightShape.setFillColor(sf::Color::Transparent);
+
             window.draw(highlightShape);
-            break; // เมื่อวาดช่องที่ Highlight เสร็จแล้วให้หยุดลูปทันที
+            break;
         }
     }
 }
@@ -164,5 +178,28 @@ void GameMap::updateHighlight(sf::Vector2f mousePos) {
         else {
             tile.isHovered = false; // <--- สำคัญมาก: ต้องปิดสถานะช่องอื่นด้วย
         }
+    }
+}
+
+void GameMap::revealFog(int centerR, int centerC, int radius) {
+    bool somethingChanged = false;
+
+    for (auto& tile : tiles) {
+        // คำนวณระยะห่างแบบง่าย (Box Distance)
+        int distR = std::abs(tile.gridR - centerR);
+        int distC = std::abs(tile.gridC - centerC);
+
+        // ถ้าอยู่ในระยะที่กำหนด และยังไม่เคยเปิดมาก่อน
+        if (distR <= radius && distC <= radius) {
+            if (!tile.isExplored) {
+                tile.isExplored = true;
+                somethingChanged = true;
+            }
+        }
+    }
+
+    // สั่งวาดสีใหม่เฉพาะเมื่อมีการเปลี่ยนแปลง (เพื่อประหยัดทรัพยากร)
+    if (somethingChanged) {
+        updateColors();
     }
 }

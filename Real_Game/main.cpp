@@ -1,11 +1,16 @@
 ﻿#include <SFML/Graphics.hpp>
 #include <vector>
 #include <cmath>
-#include "GameMap.h" // <--- อย่าลืม include ตัวนี้
+#include <cstdlib> // <--- เพิ่มตัวนี้สำหรับ rand()
+#include <ctime>   // <--- เพิ่มตัวนี้สำหรับ time()
+#include "GameMap.h" // <--- Game map system (Yu)
 #include "MouseUI.h" // <--- USER INTERFACE MOUSE (PLAY)
 #include "GameCamera.h" // <--- GAME CAMERA SYSTEM (Yu)
 
 int main() {
+    // ตั้งค่า Seed สำหรับการสุ่ม (ใส่ใน Main ทีเดียวจบ)
+    std::srand(static_cast<unsigned>(std::time(nullptr)));
+
     // กำหนดค่าการลบรอยหยัก (Antialiasing) เพื่อให้ขอบหกเหลี่ยมคมชัดขึ้น (PLAY)
     sf::ContextSettings settings;
     settings.antialiasingLevel = 8;
@@ -14,7 +19,11 @@ int main() {
 
     //----Map system----//(Yu)
     // 1. สร้าง Map แค่บรรทัดเดียว! (ขนาด 20 แถว x 25 คอลัมน์)
-    GameMap worldMap(20, 25);
+    GameMap worldMap(30, 30);
+
+    // [FOG SYSTEM] เปิดแมพจุดเริ่มต้นทันที! 
+    // ไม่งั้นเข้าเกมมาจะมืดหมด (เปิดที่พิกัด 0,0 รัศมี 4 ช่อง)
+    worldMap.revealFog(0, 0, 4);
 
     // 2. สร้าง Object กล้อง
     GameCamera camera(1080, 720);
@@ -27,6 +36,15 @@ int main() {
 
             // 3. ส่ง Event ให้กล้องจัดการ (คลิก/ปล่อย/หมุนล้อ)
             camera.handleEvent(event, window);
+
+            // [DEBUG / TEST] กดปุ่ม Spacebar เพื่อสุ่มเปิดแมพ (ไว้เทสว่าระบบทำงานไหม)
+            if (event.type == sf::Event::KeyPressed) {
+                if (event.key.code == sf::Keyboard::Space) {
+                    int r = std::rand() % 30;
+                    int c = std::rand() % 30;
+                    worldMap.revealFog(r, c, 3); // เปิดหมอกตรงจุดที่สุ่มได้
+                }
+            }
         }
 
         // 4. อัปเดตกล้อง (คำนวณการเลื่อน)
