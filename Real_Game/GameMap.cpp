@@ -258,7 +258,7 @@ sf::ConvexShape GameMap::createHexShape(float x, float y, TerrainType type) {
     else if (type == TerrainType::Mountain) hex.setFillColor(sf::Color(120, 120, 120)); // เทา
 
     hex.setOutlineColor(sf::Color(30, 30, 30)); // ขอบดำจางๆ
-    hex.setOutlineThickness(2.0f);
+    hex.setOutlineThickness(-1.0f);
 
     return hex;
 }
