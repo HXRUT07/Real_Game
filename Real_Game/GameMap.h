@@ -30,8 +30,8 @@ private:
 
     sf::ConvexShape createHexShape(float x, float y, TerrainType type);
 
-    // <--- เพิ่มฟังก์ชันส่วนตัว (Private Helper)
-    void generateTerrain(TerrainType type, int numClusters, int clusterSize);
+    // ต้องมีบรรทัดนี้:
+    void createCluster(TerrainType type, int startR, int startC, int clusterSize);
     void updateColors();
 
 public:
