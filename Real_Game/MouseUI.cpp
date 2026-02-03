@@ -1,7 +1,7 @@
 ﻿#include "MouseUI.h"
 
 MouseUI::MouseUI() {
-    hasFont = font.loadFromFile("font");
+    hasFont = font.loadFromFile("Roboto-VariableFont_wdth,wght.ttf");
 
     infoPanel.setSize(sf::Vector2f(220.f, 110.f));
     infoPanel.setFillColor(sf::Color(30, 30, 30, 220));
