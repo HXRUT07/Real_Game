@@ -1,0 +1,9 @@
+# Top-most EditorConfig file
+root = true
+
+# บังคับทุกไฟล์ C++ และ Header ให้ใช้ UTF-8 แบบมี BOM
+[*.{cpp,h,hpp,c,cc}]
+charset = utf-8-bom
+end_of_line = crlf
+indent_style = space
+indent_size = 4

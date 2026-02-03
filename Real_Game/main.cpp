@@ -1,7 +1,7 @@
 ﻿#include <SFML/Graphics.hpp>
 #include <vector>
 #include <cmath>
-#include "GameMap.h" // <--- ÍÂèÒÅ×Á include µÑÇ¹Õé
+#include "GameMap.h" // <--- อย่าลืม include ตัวนี้
 #include "MouseUI.h" // <--- USER INTERFACE MOUSE (PLAY)
 
 int main() {
@@ -9,11 +9,11 @@ int main() {
     sf::ContextSettings settings;
     settings.antialiasingLevel = 8;
 
-    sf::RenderWindow window(sf::VideoMode(1080, 720), "Hexa-Conquest");
+    sf::RenderWindow window(sf::VideoMode(1080, 720), "Hexa-Conquest", sf::Style::Default, settings);
 
-	//--------------(ÂÙ)----------------//
-	//----Map system----//
-    // 1. ÊÃéÒ§ Map á¤èºÃÃ·Ñ´à´ÕÂÇ! (¢¹Ò´ 20 á¶Ç x 25 ¤ÍÅÑÁ¹ì)
+    //--------------(ยู)----------------//
+    //----Map system----//
+    // 1. สร้าง Map แค่บรรทัดเดียว! (ขนาด 20 แถว x 25 คอลัมน์)
     GameMap worldMap(20, 25);
 
     while (window.isOpen()) {
@@ -32,21 +32,21 @@ int main() {
         // เราจะส่ง mousePos ไปให้ worldMap ตรวจสอบว่าชี้ที่ช่องไหน
         worldMap.updateHighlight(mousePos);
 
-        window.clear(sf::Color(20, 20, 30)); // ¾×é¹ËÅÑ§ÊÕ¹éÓà§Ô¹à¢éÁæ àËÁ×Í¹ÍÇ¡ÒÈ
+        window.clear(sf::Color(20, 20, 30)); // พื้นหลังสีน้ำเงินเข้มๆ เหมือนอวกาศ
 
-        // 2. ÊÑè§ÇÒ´ Map á¤èºÃÃ·Ñ´à´ÕÂÇ!
+        // 2. สั่งวาด Map แค่บรรทัดเดียว!
         worldMap.draw(window);
 
         window.display();
     }
 
-	//--------------(à¾ÅÂì)----------------//
+    //--------------(เพลย์)----------------//
 
-	//--------------(à»ÃÁ)----------------//
+    //--------------(เปรม)----------------//
 
-	//--------------(»Å×éÁ)----------------//
+    //--------------(ปลื้ม)----------------//
 
-    //--------------(ÍÒ©Ð)----------------//
+    //--------------(อาฉะ)----------------//
 
     return 0;
 }

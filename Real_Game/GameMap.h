@@ -9,7 +9,7 @@ enum class TerrainType {
     Grass,
     Water,
     Mountain,
-    Forest // <--- à¾ÔèÁ»èÒà¢éÒÁÒ
+    Forest // <--- เพิ่มป่าเข้ามา
 };
 
 struct HexTile {
@@ -27,7 +27,7 @@ private:
 
     sf::ConvexShape createHexShape(float x, float y, TerrainType type);
 
-    // <--- à¾ÔèÁ¿Ñ§¡ìªÑ¹ÊèÇ¹µÑÇ (Private Helper)
+    // <--- เพิ่มฟังก์ชันส่วนตัว (Private Helper)
     void generateTerrain(TerrainType type, int numClusters, int clusterSize);
     void updateColors();
 
@@ -35,7 +35,7 @@ public:
     GameMap(int r, int c);
     void draw(sf::RenderWindow& window);
 
-    // Helper function ÊÓËÃÑºà¾×èÍ¹ºéÒ¹ (¶éÒ¨Ð·Óà´ÕëÂÇÁÒà¾ÔèÁ·ÕËÅÑ§)
+    // Helper function สำหรับเพื่อนบ้าน (ถ้าจะทำเดี๋ยวมาเพิ่มทีหลัง)
 
     // <--- ฟังก์ชันหัวใจหลักสำหรับระบบ Highlight
     void updateHighlight(sf::Vector2f mousePos);
