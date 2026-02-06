@@ -73,7 +73,7 @@ int main() {
             if (event.type == sf::Event::MouseButtonPressed) {
                 if (event.mouseButton.button == sf::Mouse::Right) {
                     // เรียกใช้แถบข้อมูลเมื่อคลิกขวา
-                    gui.showResourcePanel(mousePosScreen, 100, 50, 30);
+                    gui.showResourcePanel((float)window.getSize().x, 100, 50, 30);
                 }
                 else if (event.mouseButton.button == sf::Mouse::Left) {
                     // คลิกซ้ายเพื่อซ่อน (เลือกอย่างใดอย่างหนึ่ง)

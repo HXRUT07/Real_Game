@@ -15,7 +15,7 @@ private:
 public:
     MouseUI(); // Constructor สำหรับโหลดฟอนต์
 
-    void showResourcePanel(sf::Vector2f position, int gold, int wood, int food);
+    void showResourcePanel(float windowWidth, int gold, int wood, int food);
     void hideInfo();
 
     void update(sf::Vector2f mousePos);
