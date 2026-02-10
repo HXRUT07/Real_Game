@@ -2,6 +2,7 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <cmath>
+#include "City.h"
 
 // ขนาดของ Hexagon
 const float HEX_SIZE = 30.0f;
@@ -22,12 +23,14 @@ struct HexTile {
 
     bool isHovered = false;   // สถานะเมาส์ชี้ (กรอบขาว)
     bool isExplored = false;  // สถานะหมอก (false = มืด/มองไม่เห็น)
+    City* city = nullptr; // ถ้ามีเมืองอยู่บนช่องนี้ จะชี้ไปที่ City Object
 };
 
 class GameMap {
 public:
     // Constructor
     GameMap(int r, int c);
+    ~GameMap();
 
     // ฟังก์ชันวาดและอัปเดตพื้นฐาน
     void draw(sf::RenderWindow& window);
