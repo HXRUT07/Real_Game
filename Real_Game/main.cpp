@@ -15,14 +15,17 @@ int main() {
     sf::ContextSettings settings;
     settings.antialiasingLevel = 8;
 
-    sf::RenderWindow window(sf::VideoMode(1080, 720), "Hexa-Conquest", sf::Style::Default, settings);
+    sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Hexa-Conquest", sf::Style::Fullscreen, settings);
+
+    // (แถม) จำกัดเฟรมเรตหน่อย เครื่องจะได้ไม่ทำงานหนักเกินไปตอน Fullscreen
+    window.setFramerateLimit(60);
 
     //----Map system----//(Yu)
     // 1. สร้าง Map แค่บรรทัดเดียว!
     GameMap worldMap(50, 50);
 
     // 2. สร้าง Object กล้อง
-    GameCamera camera(1080, 720);
+    GameCamera camera(window.getSize().x, window.getSize().y);
 
     MouseUI gui; //(PLAY)
 
@@ -33,6 +36,10 @@ int main() {
 
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed)
+                window.close();
+
+            // กด Escape เพื่อออกจากเกมได้ (สำคัญมากตอนเทส Fullscreen ไม่งั้นออกยาก)
+            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)
                 window.close();
 
             // 3. ส่ง Event ให้กล้องจัดการ (คลิก/ปล่อย/หมุนล้อ)
@@ -66,7 +73,7 @@ int main() {
             if (event.type == sf::Event::MouseButtonPressed) {
                 if (event.mouseButton.button == sf::Mouse::Right) {
                     // เรียกใช้แถบข้อมูลเมื่อคลิกขวา
-                    gui.showInfo(mousePosScreen, "Zone Information", "Type: Grassland\nYield: +2 Food");
+                    gui.showResourcePanel((float)window.getSize().x, 100, 50, 30);
                 }
                 else if (event.mouseButton.button == sf::Mouse::Left) {
                     // คลิกซ้ายเพื่อซ่อน (เลือกอย่างใดอย่างหนึ่ง)
@@ -88,7 +95,7 @@ int main() {
         sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window), camera.getView());
         // เราจะส่ง mousePos ไปให้ worldMap ตรวจสอบว่าชี้ที่ช่องไหน
         worldMap.updateHighlight(mousePos);
-        gui.update(mousePosScreen, 100, 50);
+        gui.update(mousePosScreen);
 
         window.clear(sf::Color(20, 20, 30)); // พื้นหลังสีน้ำเงินเข้มๆ เหมือนอวกาศ
 
