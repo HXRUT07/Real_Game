@@ -1,6 +1,8 @@
 ﻿#include "City.h"
 
-City::City(int r, int c) : gridR(r), gridC(c) {}
+City::City(int r, int c, sf::Vector2f pos)
+    : gridR(r), gridC(c), worldPos(pos) {
+}
 
 void City::addBuilding(BuildingType type)
 {
@@ -12,7 +14,7 @@ void City::addBuilding(BuildingType type)
         b.woodCost = 2;
         b.stoneCost = 1;
         b.goldCost = 0;
-        b.shape.setFillColor(sf::Color(139, 69, 19)); // น้ำตาล
+        b.shape.setFillColor(sf::Color(139, 69, 19));
     }
     else if (type == BuildingType::Workshop) {
         b.name = "Workshop";
@@ -37,6 +39,13 @@ void City::addBuilding(BuildingType type)
     }
 
     b.shape.setSize(sf::Vector2f(15, 15));
+
+    // วางเรียงอาคารข้างๆ กัน
+    b.shape.setPosition(
+        worldPos.x + buildings.size() * 18,
+        worldPos.y
+    );
+
     buildings.push_back(b);
 }
 
