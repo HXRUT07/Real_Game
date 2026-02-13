@@ -1,4 +1,5 @@
 ﻿#include "GameMap.h"
+#include "City.h"
 #include <cstdlib> 
 #include <ctime>   
 #include <algorithm> 
@@ -40,6 +41,19 @@ GameMap::GameMap(int r, int c) {
 
     // อัปเดตสีครั้งแรก (จะเป็นสีเขียวล้วน)
     updateColors();
+}
+
+// --------------------------------------------------------
+// Destructor
+// --------------------------------------------------------
+GameMap::~GameMap() {
+    // >>> CITY PART <<<
+    for (auto& tile : tiles) {
+        if (tile.city != nullptr) {
+            delete tile.city;
+            tile.city = nullptr;
+        }
+    }
 }
 
 // --------------------------------------------------------
@@ -95,6 +109,18 @@ void GameMap::startGame(int spawnR, int spawnC) {
 
     // E. เปิดหมอกเฉพาะจุดเกิด
     revealFog(spawnR, spawnC, 1);
+
+    // >>> CITY PART <<<
+    if (spawnIndex >= 0 && spawnIndex < tiles.size()) {
+        tiles[spawnIndex].city = new City(
+            spawnR,
+            spawnC,
+            tiles[spawnIndex].shape.getPosition()
+        );
+
+        tiles[spawnIndex].city->addBuilding(BuildingType::Sawmill);
+        tiles[spawnIndex].city->addBuilding(BuildingType::Barracks);
+    }
 
     // F. อัปเดตสีทั้งหมดใหม่ (วาดป่า/เขา และวาดสีดำทับส่วนที่ยังไม่เปิด)
     updateColors();

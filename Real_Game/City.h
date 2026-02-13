@@ -6,8 +6,8 @@
 
 class City {
 private:
-    int gridR, gridC;                // เมืองอยู่ช่องไหนใน grid
-    sf::Vector2f worldPos;           // ตำแหน่งจริงบนจอ
+    int gridR, gridC;
+    sf::Vector2f worldPos;
     std::vector<Building> buildings;
 
 public:
