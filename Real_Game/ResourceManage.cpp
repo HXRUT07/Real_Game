@@ -1,4 +1,4 @@
-﻿#include "ResourceManage.h"#include "ResourceSystem.h"
+﻿#include "ResourceManage.h"
 #include <cstdlib> // สำหรับ rand()
 
 int ResourceSystem::randomRange(int min, int max) {
