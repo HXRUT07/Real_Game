@@ -133,15 +133,22 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="City.cpp" />
     <ClCompile Include="GameCamera.cpp" />
     <ClCompile Include="GameMap.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="MouseUI.cpp" />
+    <ClCompile Include="ResourceManage.cpp" />
+    <ClCompile Include="Unit.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="BuildingType.h" />
+    <ClInclude Include="City.h" />
     <ClInclude Include="GameCamera.h" />
     <ClInclude Include="GameMap.h" />
     <ClInclude Include="MouseUI.h" />
+    <ClInclude Include="ResourceManage.h" />
+    <ClInclude Include="Unit.h" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

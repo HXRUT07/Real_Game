@@ -1,22 +1,34 @@
 ﻿#pragma once
 #include <SFML/Graphics.hpp>
 #include <string>
+#include <vector> // <---  จำเป็นสำหรับ std::vector
+#include "Unit.h" // <---  ต้องรู้จัก Unit เพื่อเก็บ Pointer
 
 class MouseUI {
 private:
     sf::Font font;
-    sf::Text infoText;
-
-    // --- ส่วนที่เพิ่มสำหรับระบบคลิกขวา ---
-    sf::RectangleShape infoPanel;
-    sf::Text infoContent;
-    bool isPanelVisible;
     bool hasFont;
 
+    // --- ส่วนเดิม (Tooltip/Resource) ---
+    bool isPanelVisible;
+    sf::RectangleShape infoPanel;
+    sf::Text infoContent;
+
+    // --- ส่วนแถบขวา (Side Panel) ---
+    bool m_showSidePanel = false;        // สถานะโชว์แถบขวา
+    std::vector<Unit*> m_selectedUnits;  // รายการยูนิตที่จะโชว์
+
 public:
-    MouseUI(); // Constructor สำหรับโหลดฟอนต์
-    void update(sf::Vector2f mousePos, int gold, int wood); // อัปเดตข้อความตามเมาส์
-    void showInfo(sf::Vector2f position, std::string title, std::string detail); // เปิดแถบข้อมูล
-    void hideInfo(); // ปิดแถบข้อมูล
-    void draw(sf::RenderWindow& window); // วาด UI ลงหน้าจอ
+    MouseUI(); // Constructor
+
+    // ฟังก์ชันเดิม
+    void showResourcePanel(float windowWidth, int gold, int wood, int food);
+    void hideInfo();
+
+    // ฟังก์ชันจัดการแถบขวา
+    void setSelectionList(const std::vector<Unit*>& units); // รับยูนิตมาโชว์
+    void clearSelection();                                  // ปิดแถบ
+
+    void update(sf::Vector2f mousePos);
+    void draw(sf::RenderWindow& window);
 };
