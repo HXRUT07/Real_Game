@@ -226,10 +226,8 @@ void GameMap::calculateValidMoves(int startR, int startC, int moveRange) {
             if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
                 int nIdx = nr * cols + nc;
 
-                // กฎการเดิน: ไม่เคยไป + ไม่ใช่เขา/น้ำ + ต้องมองเห็นอยู่ (isVisible)
+                // กฎการเดิน: ไม่เคยไป + ต้องมองเห็นอยู่ (isVisible)
                 if (!visited[nIdx] &&
-                    tiles[nIdx].type != TerrainType::Mountain &&
-                    tiles[nIdx].type != TerrainType::Water &&
                     tiles[nIdx].isVisible) { // <--- เช็คตรงนี้
 
                     visited[nIdx] = true;

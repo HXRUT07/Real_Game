@@ -1,19 +1,22 @@
 ﻿#include "Unit.h"
 #include <cmath>
 
-// ต้องตรงกับ GameMap (ถ้าแยกไฟล์ config ได้จะดีมาก แต่ตอนนี้ Hardcode ไปก่อน)
+// ต้องตรงกับ GameMap
 const float HEX_SIZE_UNIT = 30.0f;
 
-Unit::Unit(int startR, int startC) {
+// รับ name เข้ามาด้วย
+Unit::Unit(std::string name, int startR, int startC) {
+    m_name = name; // เก็บชื่อยูนิต
     m_gridR = startR;
     m_gridC = startC;
+
+    // ค่าสถานะเริ่มต้น
     m_maxAP = 2;
     m_currentAP = m_maxAP;
-    m_moveRange = 3; // เดินได้ไกล 3 ช่อง
+    m_moveRange = 3;
 
-    // สร้างตัวทหาร (วงกลมสีแดง)
+    // สร้างตัวทหาร (วงกลม)
     m_shape.setRadius(15.0f);
-    m_shape.setFillColor(sf::Color::Red);
     m_shape.setOutlineColor(sf::Color::White);
     m_shape.setOutlineThickness(2.0f);
     m_shape.setOrigin(15.0f, 15.0f); // จุดหมุนอยู่ตรงกลาง
@@ -28,6 +31,16 @@ void Unit::moveTo(int r, int c) {
 }
 
 void Unit::draw(sf::RenderWindow& window) {
+    // Logic เปลี่ยนสีตาม AP
+    // ถ้ายังมีแรงเดิน -> สีแดง
+    if (m_currentAP > 0) {
+        m_shape.setFillColor(sf::Color::Red);
+    }
+    // ถ้าหมดแรง -> สีฟ้า (Cyan)
+    else {
+        m_shape.setFillColor(sf::Color::Cyan);
+    }
+
     window.draw(m_shape);
 }
 
