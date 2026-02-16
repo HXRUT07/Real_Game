@@ -38,6 +38,11 @@ public:
 
     // [ใหม่] เช็คว่าเกมเริ่มหรือยัง (Main อาจจะอยากรู้)
     bool isGameStarted() const { return m_gameStarted; }
+    // [ใหม่] ตั้งค่าตำแหน่งเมืองผู้เล่น (Main อาจจะอยากรู้) Prame
+    void setPlayerCity(sf::Vector2f worldPos);
+
+    // [เพิ่มบรรทัดนี้] ฟังก์ชันสำหรับเปลี่ยนช่องเป็นเมือง
+    void spawnPlayerCity(sf::Vector2f worldPos);
 
 private:
     // ตัวแปรเก็บข้อมูล
@@ -69,3 +74,5 @@ private:
     // [ใหม่] เสกทรัพยากรการันตีรอบตัวจุดเกิด (Starter Pack)
     void spawnStarterResources(int r, int c);
 };
+//การตั้งค่าตำแหน่งเมืองผู้เล่น (Main อาจจะอยากรู้) Prame
+void setPlayerCity(sf::Vector2f worldPos);

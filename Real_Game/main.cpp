@@ -1,33 +1,30 @@
 ﻿#include <SFML/Graphics.hpp>
 #include <vector>
 #include <cmath>
-#include <cstdlib> // <--- เพิ่มตัวนี้สำหรับ rand()
-#include <ctime>   // <--- เพิ่มตัวนี้สำหรับ time()
-#include "GameMap.h" // <--- Game map system (Yu)
-#include "MouseUI.h" // <--- USER INTERFACE MOUSE (PLAY)
-#include "GameCamera.h" // <--- GAME CAMERA SYSTEM (Yu)
+#include <cstdlib>
+#include <ctime>
+#include "GameMap.h"
+#include "MouseUI.h"
+#include "GameCamera.h"
 
 int main() {
-    // ตั้งค่า Seed สำหรับการสุ่ม (ใส่ใน Main ทีเดียวจบ)
+    // ตั้งค่า Seed สำหรับการสุ่ม
     std::srand(static_cast<unsigned>(std::time(nullptr)));
 
-    // กำหนดค่าการลบรอยหยัก (Antialiasing) เพื่อให้ขอบหกเหลี่ยมคมชัดขึ้น (PLAY)
     sf::ContextSettings settings;
     settings.antialiasingLevel = 8;
 
     sf::RenderWindow window(sf::VideoMode(1080, 720), "Hexa-Conquest", sf::Style::Default, settings);
 
-    //----Map system----//(Yu)
-    // 1. สร้าง Map แค่บรรทัดเดียว!
+    //----Map system----//
     GameMap worldMap(50, 50);
-
-    // 2. สร้าง Object กล้อง
     GameCamera camera(1080, 720);
+    MouseUI gui;
 
-    MouseUI gui; //(PLAY)
+    // <--- NEW: ตัวแปรเช็คสถานะว่าผู้เล่นเลือกจุดเกิดไปหรือยัง
+    bool isPlayerSpawned = false;
 
     while (window.isOpen()) {
-
         sf::Vector2f mousePosScreen = window.mapPixelToCoords(sf::Mouse::getPosition(window));
         sf::Event event;
 
@@ -35,68 +32,75 @@ int main() {
             if (event.type == sf::Event::Closed)
                 window.close();
 
-            // 3. ส่ง Event ให้กล้องจัดการ (คลิก/ปล่อย/หมุนล้อ)
             camera.handleEvent(event, window);
 
             // -----------------------------------------------------------------------
-            // เพิ่มส่วนตรวจสอบการคลิกซ้าย เพื่อเลือกจุดเกิด (Spawn Selection)
+            // ส่วนตรวจสอบการคลิกซ้าย
             // -----------------------------------------------------------------------
+           // ... (ภายใน while pollEvent) ...
+
             if (event.type == sf::Event::MouseButtonPressed) {
                 if (event.mouseButton.button == sf::Mouse::Left) {
-                    // 1. ดึงตำแหน่งเมาส์บนหน้าจอ
-                    sf::Vector2i pixelPos = sf::Mouse::getPosition(window);
 
-                    // 2. แปลงเป็นตำแหน่งในโลกเกม (World Coords) โดยอิงตามกล้อง
+                    // 1. ดึงตำแหน่งเมาส์และแปลงเป็นพิกัดโลก (จำเป็นต้องทำก่อน)
+                    sf::Vector2i pixelPos = sf::Mouse::getPosition(window);
                     sf::Vector2f worldPos = window.mapPixelToCoords(pixelPos, camera.getView());
 
-                    // 3. ส่งให้ GameMap จัดการ (ถ้ายังไม่เริ่มเกม มันจะใช้เลือกจุดเกิด)
-                    worldMap.handleMouseClick(worldPos);
+                    // [จุดที่ 2] : ใส่เงื่อนไขแยกโหมดตรงนี้
+                    if (!isPlayerSpawned) {
+                        // --- กรณีเริ่มเกมครั้งแรก (ยังไม่เกิด) ---
+                        // สั่งให้ map สร้างเมืองที่จุดนี้ และเปลี่ยนสี
+                        worldMap.setPlayerCity(worldPos);
+
+                        // เปลี่ยนตัวแปรเป็น true เพื่อบอกว่า "เกิดแล้วนะ"
+                        isPlayerSpawned = true;
+
+                        printf("Game Started: City Spawned!\n"); // (เช็คผลใน Console)
+                    }
+                    else {
+                        // --- กรณีเกิดแล้ว (เล่นเกมปกติ) ---
+                        // สั่งให้ map ทำงานปกติ (เช่น เดินทัพ/เลือกยูนิต)
+                        worldMap.handleMouseClick(worldPos);
+                    }
                 }
             }
+
+            // ... (โค้ดคลิกขวา หรืออื่นๆ ต่อจากนี้) ...
             // -----------------------------------------------------------------------
 
-            // [DEBUG / TEST] กดปุ่ม Spacebar เพื่อสุ่มเปิดแมพ (ไว้เทสว่าระบบทำงานไหม)
             if (event.type == sf::Event::KeyPressed) {
                 if (event.key.code == sf::Keyboard::Space) {
-                    int r = std::rand() % 30;
-                    int c = std::rand() % 30;
+                    // Reset การเกิดได้ถ้าต้องการเทสใหม่ (Optional)
+                    // isPlayerSpawned = false; 
                 }
             }
 
             if (event.type == sf::Event::MouseButtonPressed) {
                 if (event.mouseButton.button == sf::Mouse::Right) {
-                    // เรียกใช้แถบข้อมูลเมื่อคลิกขวา
                     gui.showInfo(mousePosScreen, "Zone Information", "Type: Grassland\nYield: +2 Food");
                 }
                 else if (event.mouseButton.button == sf::Mouse::Left) {
-                    // คลิกซ้ายเพื่อซ่อน (เลือกอย่างใดอย่างหนึ่ง)
-                    gui.hideInfo();
+                    // ถ้าคลิกซ้ายตอนเล่นปกติ ให้ซ่อน GUI
+                    if (isPlayerSpawned) gui.hideInfo();
                 }
             }
-
         }
 
-        // 4. อัปเดตกล้อง (คำนวณการเลื่อน)
         camera.update(window);
-
-        // 5. นำ View จากกล้องมาใส่ window ก่อนจะทำอย่างอื่น
         window.setView(camera.getView());
 
-        // --- Logic การตรวจสอบ Highlight ---
-        // จุดสำคัญ: ต้องส่ง view ของ camera เข้าไปใน mapPixelToCoords ด้วย
-        // ไม่อย่างนั้นเมาส์จะชี้ไม่ตรงตำแหน่งเมื่อมีการเลื่อนกล้อง
+        // Update Highlight
         sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window), camera.getView());
-        // เราจะส่ง mousePos ไปให้ worldMap ตรวจสอบว่าชี้ที่ช่องไหน
         worldMap.updateHighlight(mousePos);
+
         gui.update(mousePosScreen, 100, 50);
 
-        window.clear(sf::Color(20, 20, 30)); // พื้นหลังสีน้ำเงินเข้มๆ เหมือนอวกาศ
+        window.clear(sf::Color(20, 20, 30));
 
-        // สั่งวาด Map แค่บรรทัดเดียว!
-        window.setView(camera.getView()); // ใช้ View กล้องวาดแมพ
+        window.setView(camera.getView());
         worldMap.draw(window);
 
-        window.setView(window.getDefaultView()); // คืนค่า View ปกติเพื่อวาด UI ทับข้างบนสุด
+        window.setView(window.getDefaultView());
         gui.draw(window);
 
         window.display();
