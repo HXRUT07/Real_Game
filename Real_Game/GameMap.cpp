@@ -189,35 +189,6 @@ void GameMap::revealFog(int centerR, int centerC, int sightRange) {
     }
     if (changed) updateColors();
 }
-// --------------------------------------------------------
-// 6. Player Spawn System: ระบบเลือกจุดเกิดและเปลี่ยนสี
-// --------------------------------------------------------
-void GameMap::setPlayerCity(sf::Vector2f worldPos) {
-    // วนลูปหาช่องใน vector 'tiles' (ไม่ใช่ hexGrid)
-    for (auto& tile : tiles) {
-
-        // เช็คว่าเมาส์ชี้ในช่องนี้หรือไม่
-        if (tile.shape.getGlobalBounds().contains(worldPos)) {
-
-            // 1. รันระบบ startGame เดิมของคุณ (เพื่อสร้างทรัพยากร/เคลียร์หมอก)
-            // ส่งตำแหน่ง Grid Row/Col ของช่องที่คลิกเข้าไป
-            startGame(tile.gridR, tile.gridC);
-
-            // 2. เปลี่ยนสีช่องนี้เป็น "สีเมือง" (เช่น สีฟ้า Cyan)
-            // *สำคัญ* ต้องทำหลัง startGame() เพราะ startGame มีการเรียก updateColors() ที่จะรีเซ็ตสี
-            tile.shape.setFillColor(sf::Color::Cyan);
-
-            // ทำให้ขอบหนาขึ้นหน่อย จะได้ดูเด่นๆ
-            tile.shape.setOutlineColor(sf::Color::White);
-            tile.shape.setOutlineThickness(2.0f);
-
-            // (Optional) ถ้าในอนาคตคุณมีตัวแปรเก็บสถานะเมือง
-            // tile.type = TerrainType::City; 
-
-            break; // เจอแล้ว หยุดทำงานทันที
-        }
-    }
-}
 
 void GameMap::calculateValidMoves(int startR, int startC, int moveRange) {
     clearHighlight();
@@ -359,4 +330,6 @@ sf::ConvexShape GameMap::createHexShape(float x, float y, TerrainType type) {
         float rad = angle * (PI / 180.0f);
         hex.setPoint(i, sf::Vector2f(x + HEX_SIZE * std::cos(rad), y + HEX_SIZE * std::sin(rad)));
     }
+    hex.setOutlineThickness(-1.0f);
+    return hex;
 }

@@ -40,6 +40,15 @@ public:
 
     // Getters / Checkers
     bool isGameStarted() const { return m_gameStarted; }
+    bool getGridCoords(sf::Vector2f mousePos, int& outR, int& outC);
+    bool isValidMove(int r, int c);
+
+    // Movement & Fog Logic
+    void calculateValidMoves(int startR, int startC, int moveRange);
+    void clearHighlight();
+
+    // [สำคัญ] ต้องอยู่ตรง Public นะครับ ห้ามเอาไปซ่อนใน Private
+    void revealFog(int centerR, int centerC, int sightRange);
 
 private:
     std::vector<HexTile> tiles;
@@ -55,5 +64,3 @@ private:
     void generateWorldResources();
     void spawnStarterResources(int r, int c);
 };
-//การตั้งค่าตำแหน่งเมืองผู้เล่น (Main อาจจะอยากรู้) Prame
-void setPlayerCity(sf::Vector2f worldPos);
