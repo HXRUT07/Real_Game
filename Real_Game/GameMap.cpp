@@ -52,6 +52,20 @@ GameMap::GameMap(int r, int c) {
 // --------------------------------------------------------
 // Interaction & Helpers
 // --------------------------------------------------------
+
+// --- [NEW] ฟังก์ชันดึง Pointer ของ Tile (Implement ตรงนี้) ---
+HexTile* GameMap::getTile(int r, int c) {
+    // เช็คขอบเขต array กันแครช
+    if (r >= 0 && r < rows && c >= 0 && c < cols) {
+        // สูตรคำนวณ Index ของ 1D Array จาก 2D
+        int index = r * cols + c;
+        if (index >= 0 && index < tiles.size()) {
+            return &tiles[index];
+        }
+    }
+    return nullptr; // ถ้าหาไม่เจอ หรือ ออกนอกแมพ
+}
+
 bool GameMap::getGridCoords(sf::Vector2f mousePos, int& outR, int& outC) {
     for (const auto& tile : tiles) {
         if (tile.shape.getGlobalBounds().contains(mousePos)) {
@@ -227,9 +241,7 @@ void GameMap::calculateValidMoves(int startR, int startC, int moveRange) {
                 int nIdx = nr * cols + nc;
 
                 // กฎการเดิน: ไม่เคยไป + ต้องมองเห็นอยู่ (isVisible)
-                if (!visited[nIdx] &&
-                    tiles[nIdx].isVisible) { // <--- เช็คตรงนี้
-
+                if (!visited[nIdx] && tiles[nIdx].isVisible) { // <--- เช็คตรงนี้
                     visited[nIdx] = true;
                     q.push({ nr, nc, curr.cost + 1 });
                 }
@@ -255,6 +267,8 @@ bool GameMap::isValidMove(int r, int c) {
 // --------------------------------------------------------
 void GameMap::updateColors() {
     for (auto& tile : tiles) {
+        // [MODIFIED] Logic การวาดสี: เช็คจาก Explored/Visible
+
         if (!tile.isExplored) {
             // ยังไม่เคยมา -> ดำมืด
             tile.shape.setFillColor(sf::Color(10, 10, 10));
@@ -289,11 +303,18 @@ void GameMap::updateColors() {
 
 void GameMap::updateHighlight(sf::Vector2f mousePos) {
     for (auto& tile : tiles) {
-        tile.isHovered = tile.shape.getGlobalBounds().contains(mousePos);
+        // เช็คเมาส์ hover (เฉพาะช่องที่เปิดแล้วถึงจะยอมให้ hover)
+        if (tile.isExplored) {
+            tile.isHovered = tile.shape.getGlobalBounds().contains(mousePos);
+        }
+        else {
+            tile.isHovered = false;
+        }
     }
 }
 
 void GameMap::draw(sf::RenderWindow& window) {
+    // วาดพื้นหลัง
     for (const auto& tile : tiles) {
         window.draw(tile.shape);
     }
@@ -302,7 +323,7 @@ void GameMap::draw(sf::RenderWindow& window) {
     for (const auto& tile : tiles) {
         if (tile.isPath) {
             sf::ConvexShape h = tile.shape;
-            h.setFillColor(sf::Color(0, 255, 0, 100));
+            h.setFillColor(sf::Color(0, 255, 0, 100)); // สีเขียวโปร่งใส
             h.setOutlineColor(sf::Color::Green);
             h.setOutlineThickness(2.0f);
             window.draw(h);
@@ -317,7 +338,7 @@ void GameMap::draw(sf::RenderWindow& window) {
             h.setOutlineColor(sf::Color::White);
             h.setOutlineThickness(3.0f);
             window.draw(h);
-            break;
+            // ไม่ break เพราะบางทีเมาส์อาจจะคาบเกี่ยวเส้นขอบ
         }
     }
 }
@@ -332,4 +353,17 @@ sf::ConvexShape GameMap::createHexShape(float x, float y, TerrainType type) {
     }
     hex.setOutlineThickness(-1.0f);
     return hex;
+}
+
+// ในไฟล์ GameMap.cpp (วางต่อท้ายสุด)
+
+HexTile* GameMap::getTile(int r, int c) {
+    // เช็คว่าพิกัดอยู่ในขอบเขต Map หรือไม่
+    if (r >= 0 && r < rows && c >= 0 && c < cols) {
+        int index = r * cols + c;
+        if (index >= 0 && index < tiles.size()) {
+            return &tiles[index]; // ส่งตัวจริง (Pointer) กลับไปแก้ไขค่าได้
+        }
+    }
+    return nullptr; // ถ้าหาไม่เจอ
 }

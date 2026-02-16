@@ -26,6 +26,12 @@ struct HexTile {
     // [สำคัญ] ต้องมีตัวนี้ครับ ไม่งั้น Error!
     bool isVisible = false;   // มองเห็นอยู่ไหม (ในระยะสายตา)
     bool isPath = false;      // เป็นช่องทางเดินที่เลือกได้หรือไม่ (สีเขียว)
+
+    // --- [NEW] ส่วนเก็บข้อมูลทรัพยากร (เพิ่มตรงนี้เพื่อให้จำค่าได้) ---
+    bool hasResourcesGenerated = false; // เช็คว่าเคยสุ่มของหรือยัง
+    int storedWood = 0;
+    int storedGold = 0;
+    int storedFood = 0;
 };
 
 class GameMap {
@@ -49,6 +55,9 @@ public:
 
     // [สำคัญ] ต้องอยู่ตรง Public นะครับ ห้ามเอาไปซ่อนใน Private
     void revealFog(int centerR, int centerC, int sightRange);
+
+    // --- [NEW] ฟังก์ชันขอ Pointer ของ Tile เพื่อไปแก้ค่าข้างใน (เพิ่มตรงนี้) ---
+    HexTile* getTile(int r, int c);
 
 private:
     std::vector<HexTile> tiles;

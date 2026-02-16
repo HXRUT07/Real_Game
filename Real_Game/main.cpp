@@ -6,10 +6,11 @@
 #include <iostream> // <--- เพิ่มสำหรับ cout
 #include <string>   // <--- เพิ่มสำหรับ string
 
-#include "GameMap.h" // <--- Game map system (Yu)
-#include "MouseUI.h" // <--- USER INTERFACE MOUSE (PLAY)
-#include "GameCamera.h" // <--- GAME CAMERA SYSTEM (Yu)
-#include "Unit.h"    // <--- UNIT SYSTEM
+#include "GameMap.h"     // <--- Game map system (Yu)
+#include "MouseUI.h"     // <--- USER INTERFACE MOUSE (PLAY)
+#include "GameCamera.h"  // <--- GAME CAMERA SYSTEM (Yu)
+#include "Unit.h"        // <--- UNIT SYSTEM
+#include "ResourceManage.h" // <--- [NEW] เพิ่ม Header ของระบบทรัพยากร
 
 int main() {
     // ตั้งค่า Seed สำหรับการสุ่ม (ใส่ใน Main ทีเดียวจบ)
@@ -69,8 +70,44 @@ int main() {
                     selectedUnit = nullptr;
                     worldMap.clearHighlight();
 
-                    // เรียกใช้แถบข้อมูลเมื่อคลิกขวา (Resource Panel เดิม)
-                    gui.showResourcePanel((float)window.getSize().x, 100, 50, 30);
+                    // --- ส่วนคำนวณทรัพยากร (Resource Integration) ---
+                    int r_res = 0, c_res = 0;
+
+                    // 1. เช็คว่าคลิกโดน Grid จริงๆ หรือไม่
+                    if (worldMap.getGridCoords(worldPos, r_res, c_res)) {
+
+                        // --- [UPDATED] ระบบ Lock Resource (สุ่มครั้งเดียวจำตลอดไป) ---
+
+                        // 2. ดึง Pointer ของช่องนั้นมา (ตัวจริงจาก Memory)
+                        HexTile* tile = worldMap.getTile(r_res, c_res);
+
+                        if (tile != nullptr) {
+                            // 3. เช็คว่าเคยสุ่มของไปหรือยัง?
+                            if (tile->hasResourcesGenerated) {
+                                // A. เคยสุ่มแล้ว (LOAD OLD DATA): ให้ดึงค่าเดิมที่บันทึกไว้มาใช้เลย
+                                std::cout << "[LOAD] Tile (" << r_res << "," << c_res << ") - Loading stored resources." << std::endl;
+
+                                // ส่งค่าเดิมไปโชว์ที่ UI
+                                gui.showResourcePanel((float)window.getSize().x, tile->storedWood, tile->storedGold, tile->storedFood);
+                            }
+                            else {
+                                // B. ยังไม่เคยสุ่ม (GENERATE NEW): ให้สุ่มใหม่ แล้วบันทึกเก็บไว้ (Save)
+                                std::cout << "[NEW] Tile (" << r_res << "," << c_res << ") - Generating first time." << std::endl;
+
+                                // สุ่มทรัพยากรตามประเภทพื้นที่
+                                ResourceYield loot = ResourceManage::generateResources(tile->type);
+
+                                // บันทึกค่าลง Tile ทันที
+                                tile->storedWood = loot.wood;
+                                tile->storedGold = loot.gold;
+                                tile->storedFood = loot.food;
+                                tile->hasResourcesGenerated = true; // <--- ติ๊กถูกว่าช่องนี้มีของแล้ว ห้ามสุ่มใหม่
+
+                                // ส่งค่าใหม่ไปโชว์ที่ UI
+                                gui.showResourcePanel((float)window.getSize().x, loot.wood, loot.gold, loot.food);
+                            }
+                        }
+                    }
                 }
                 else if (event.mouseButton.button == sf::Mouse::Left) {
                     // คลิกซ้าย: ซ่อน Info Panel เดิมก่อน
