@@ -38,13 +38,8 @@ void City::addBuilding(BuildingType type)
         b.shape.setFillColor(sf::Color::Blue);
     }
 
-    b.shape.setSize(sf::Vector2f(15, 15));
-
-    // วางเรียงอาคารข้างๆ กัน
-    b.shape.setPosition(
-        worldPos.x + buildings.size() * 18,
-        worldPos.y
-    );
+    b.shape.setSize(sf::Vector2f(15.f, 15.f));
+    b.shape.setPosition(worldPos.x + buildings.size() * 18.f, worldPos.y);
 
     buildings.push_back(b);
 }

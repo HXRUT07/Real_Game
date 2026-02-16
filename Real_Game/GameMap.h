@@ -2,7 +2,6 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <cmath>
-#include "City.h"
 
 // ขนาดของ Hexagon
 const float HEX_SIZE = 30.0f;
@@ -21,54 +20,47 @@ struct HexTile {
     int gridR = 0, gridC = 0;
     TerrainType type = TerrainType::Grass;
 
-    bool isHovered = false;   // สถานะเมาส์ชี้ (กรอบขาว)
-    bool isExplored = false;  // สถานะหมอก (false = มืด/มองไม่เห็น)
-    City* city = nullptr; // ถ้ามีเมืองอยู่บนช่องนี้ จะชี้ไปที่ City Object
+    bool isHovered = false;   // สถานะเมาส์ชี้
+    bool isExplored = false;  // เคยสำรวจหรือยัง (หมอกดำ)
+
+    // [สำคัญ] ต้องมีตัวนี้ครับ ไม่งั้น Error!
+    bool isVisible = false;   // มองเห็นอยู่ไหม (ในระยะสายตา)
+    bool isPath = false;      // เป็นช่องทางเดินที่เลือกได้หรือไม่ (สีเขียว)
 };
 
 class GameMap {
 public:
     // Constructor
     GameMap(int r, int c);
-    ~GameMap();
 
-    // ฟังก์ชันวาดและอัปเดตพื้นฐาน
+    // Main interaction
     void draw(sf::RenderWindow& window);
     void updateHighlight(sf::Vector2f mousePos);
-
-    // [ใหม่] ฟังก์ชันรับการคลิกจาก Main (เพื่อเลือกจุดเกิด)
     void handleMouseClick(sf::Vector2f mousePos);
 
-    // [ใหม่] เช็คว่าเกมเริ่มหรือยัง (Main อาจจะอยากรู้)
+    // Getters / Checkers
     bool isGameStarted() const { return m_gameStarted; }
+    bool getGridCoords(sf::Vector2f mousePos, int& outR, int& outC);
+    bool isValidMove(int r, int c);
+
+    // Movement & Fog Logic
+    void calculateValidMoves(int startR, int startC, int moveRange);
+    void clearHighlight();
+
+    // [สำคัญ] ต้องอยู่ตรง Public นะครับ ห้ามเอาไปซ่อนใน Private
+    void revealFog(int centerR, int centerC, int sightRange);
 
 private:
-    // ตัวแปรเก็บข้อมูล
     std::vector<HexTile> tiles;
     int rows;
     int cols;
-
-    // [ใหม่] ตัวแปรเช็คสถานะ (True = เลือกจุดเกิดแล้ว/กำลังเล่น, False = รอเลือกจุดเกิด)
     bool m_gameStarted = false;
 
-    // Helper: สร้างรูปทรงหกเหลี่ยม
+    // Internal Helpers
     sf::ConvexShape createHexShape(float x, float y, TerrainType type);
-
-    // Helper: สร้างก้อนทรัพยากร (ใช้สร้างป่า/เขา เป็นกลุ่มๆ)
     void createCluster(TerrainType type, int startR, int startC, int clusterSize);
-
-    // Helper: อัปเดตสี (เรียกเมื่อมีการเปลี่ยนแปลง Type หรือ เปิดหมอก)
     void updateColors();
-
-    // Helper: เปิดหมอก (Fog of War)
-    void revealFog(int centerR, int centerC, int radius);
-
-    // [ใหม่] ฟังก์ชันเริ่มเกมจริง (ถูกเรียกจาก handleMouseClick)
     void startGame(int spawnR, int spawnC);
-
-    // [ใหม่] สุ่มทรัพยากรทั้งโลก (Sector Based)
     void generateWorldResources();
-
-    // [ใหม่] เสกทรัพยากรการันตีรอบตัวจุดเกิด (Starter Pack)
     void spawnStarterResources(int r, int c);
 };
