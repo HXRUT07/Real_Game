@@ -1,21 +1,28 @@
 ﻿#include "GameMap.h"
-#include "City.h"
-#include <cstdlib> 
-#include <ctime>   
-#include <algorithm> 
-#include <cmath>     
+#include <cstdlib>
+#include <ctime>
+#include <algorithm>
+#include <cmath>
+#include <iostream>
+#include <queue> // <--- [สำคัญมาก] ต้องมีบรรทัดนี้ ไม่งั้น Error std::queue
 
 const float PI = 3.14159265f;
 
+// [สำคัญ] ต้องประกาศ struct Node ไว้ตรงนี้ ก่อนที่จะถูกเรียกใช้
+struct Node {
+    int r, c;
+    int cost;
+};
+
 // --------------------------------------------------------
-// 1. Constructor: สร้างกระดานเปล่าๆ รอรับคำสั่ง
+// Constructor
 // --------------------------------------------------------
 GameMap::GameMap(int r, int c) {
     this->rows = r;
     this->cols = c;
-    std::srand(static_cast<unsigned>(std::time(nullptr)));
+    this->m_gameStarted = false;
 
-    float width = sqrt(3.0f) * HEX_SIZE;
+    float width = std::sqrt(3.0f) * HEX_SIZE;
     float height = 2.0f * HEX_SIZE;
     float horizDist = width;
     float vertDist = height * 0.75f;
@@ -32,179 +39,119 @@ GameMap::GameMap(int r, int c) {
             tile.gridC = col;
             tile.type = TerrainType::Grass;
 
-            // [TRICK] ให้เป็น True ไว้ก่อน เพื่อให้ผู้เล่นเห็นกระดานเปล่าๆ ตอนเลือกจุด
+            // ตอนเริ่มเกม เปิดให้เห็นกระดานเปล่าก่อน
             tile.isExplored = true;
+            tile.isVisible = true;
 
             tiles.push_back(tile);
         }
     }
-
-    // อัปเดตสีครั้งแรก (จะเป็นสีเขียวล้วน)
     updateColors();
 }
 
 // --------------------------------------------------------
-// Destructor
+// Interaction & Helpers
 // --------------------------------------------------------
-GameMap::~GameMap() {
-    // >>> CITY PART <<<
-    for (auto& tile : tiles) {
-        if (tile.city != nullptr) {
-            delete tile.city;
-            tile.city = nullptr;
-        }
-    }
-}
-
-// --------------------------------------------------------
-// 2. Main Interaction: เมื่อผู้เล่นคลิกเมาส์
-// --------------------------------------------------------
-void GameMap::handleMouseClick(sf::Vector2f mousePos) {
-
-    // 1. กรณีเกมเริ่มแล้ว (Game Started) -> ให้ถือว่าคลิกคือ "การเดิน"
-    if (m_gameStarted) {
-        for (auto& tile : tiles) {
-            if (tile.shape.getGlobalBounds().contains(mousePos)) {
-                // สมมติว่าเดินมาช่องนี้ -> เปิดหมอกรอบตัว 1 ช่อง
-                revealFog(tile.gridR, tile.gridC, 1);
-                break;
-            }
-        }
-        return; // จบการทำงาน (ไม่ไปทำ logic เลือกจุดเกิดด้านล่าง)
-    }
-
-    // 2. กรณีเกมยังไม่เริ่ม (Selection Phase) -> เลือกจุดเกิด
-    for (auto& tile : tiles) {
+bool GameMap::getGridCoords(sf::Vector2f mousePos, int& outR, int& outC) {
+    for (const auto& tile : tiles) {
         if (tile.shape.getGlobalBounds().contains(mousePos)) {
-            startGame(tile.gridR, tile.gridC);
-            break;
+            outR = tile.gridR;
+            outC = tile.gridC;
+            return true;
+        }
+    }
+    return false;
+}
+
+void GameMap::handleMouseClick(sf::Vector2f mousePos) {
+    if (!m_gameStarted) {
+        int r, c;
+        if (getGridCoords(mousePos, r, c)) {
+            startGame(r, c);
         }
     }
 }
 
 // --------------------------------------------------------
-// 3. Game Start Sequence: เริ่มกระบวนการสร้างโลก
+// Game Logic (Start / Gen World)
 // --------------------------------------------------------
 void GameMap::startGame(int spawnR, int spawnC) {
     if (m_gameStarted) return;
     m_gameStarted = true;
 
-    // A. สุ่มทรัพยากรทั้งโลก (Background Generation)
     generateWorldResources();
-
-    // B. เสกทรัพยากรการันตีใกล้ตัว (Starter Pack)
     spawnStarterResources(spawnR, spawnC);
 
-    // C. บังคับจุดเกิดให้เป็นหญ้าเสมอ (กันเกิดทับภูเขา)
-    int spawnIndex = spawnR * cols + spawnC;
-    if (spawnIndex >= 0 && spawnIndex < tiles.size()) {
-        tiles[spawnIndex].type = TerrainType::Grass;
-    }
+    // เคลียร์จุดเกิดให้เป็นหญ้า
+    int idx = spawnR * cols + spawnC;
+    if (idx >= 0 && idx < tiles.size()) tiles[idx].type = TerrainType::Grass;
 
-    // D. [สำคัญ] รีเซ็ตหมอกให้มืดทั้งโลกก่อน (Fog Reset)
-    // เพราะตอนแรกเราเปิดไว้ให้เห็นกระดานเปล่า ตอนนี้ต้องปิดเพื่อเริ่มเล่นจริง
+    // รีเซ็ตหมอกให้มืดทั้งโลก
     for (auto& tile : tiles) {
         tile.isExplored = false;
+        tile.isVisible = false;
     }
 
-    // E. เปิดหมอกเฉพาะจุดเกิด
+    // เปิดหมอกจุดเกิด
     revealFog(spawnR, spawnC, 1);
-
-    // >>> CITY PART <<<
-    if (spawnIndex >= 0 && spawnIndex < tiles.size()) {
-        tiles[spawnIndex].city = new City(
-            spawnR,
-            spawnC,
-            tiles[spawnIndex].shape.getPosition()
-        );
-
-        tiles[spawnIndex].city->addBuilding(BuildingType::Sawmill);
-        tiles[spawnIndex].city->addBuilding(BuildingType::Barracks);
-    }
-
-    // F. อัปเดตสีทั้งหมดใหม่ (วาดป่า/เขา และวาดสีดำทับส่วนที่ยังไม่เปิด)
     updateColors();
 }
 
-// --------------------------------------------------------
-// 4. Resource Generation Logic
-// --------------------------------------------------------
 void GameMap::generateWorldResources() {
     int sectorSize = 5;
-    for (int secR = 0; secR < rows; secR += sectorSize) {
-        for (int secC = 0; secC < cols; secC += sectorSize) {
-
-            int roll = rand() % 100;
-            TerrainType selectedType = TerrainType::Grass;
+    for (int sr = 0; sr < rows; sr += sectorSize) {
+        for (int sc = 0; sc < cols; sc += sectorSize) {
+            int roll = std::rand() % 100;
+            TerrainType type = TerrainType::Grass;
             int size = 0;
 
-            // ปรับเปอร์เซ็นต์ตรงนี้
-            if (roll < 30) {
-                selectedType = TerrainType::Forest;
-                size = 10 + (rand() % 10);
-            }
-            else if (roll < 45) {
-                selectedType = TerrainType::Mountain;
-                size = 8 + (rand() % 8);
-            }
-            else if (roll < 60) {
-                selectedType = TerrainType::Water;
-                size = 15 + (rand() % 15);
-            }
-            else {
-                continue;
-            }
+            if (roll < 30) { type = TerrainType::Forest; size = 10; }
+            else if (roll < 45) { type = TerrainType::Mountain; size = 8; }
+            else if (roll < 60) { type = TerrainType::Water; size = 15; }
+            else continue;
 
-            int offsetX = rand() % sectorSize;
-            int offsetY = rand() % sectorSize;
-            int finalR = std::min(rows - 1, secR + offsetY);
-            int finalC = std::min(cols - 1, secC + offsetX);
-
-            createCluster(selectedType, finalR, finalC, size);
+            int rr = std::min(rows - 1, sr + std::rand() % sectorSize);
+            int cc = std::min(cols - 1, sc + std::rand() % sectorSize);
+            createCluster(type, rr, cc, size);
         }
     }
 }
 
 void GameMap::spawnStarterResources(int r, int c) {
-    // เสกป่าใกล้ๆ
-    int forestR = std::min(rows - 1, std::max(0, r + (rand() % 3 - 1)));
-    int forestC = std::min(cols - 1, std::max(0, c + 2));
-    createCluster(TerrainType::Forest, forestR, forestC, 5);
+    int fr = std::min(rows - 1, std::max(0, r + 2));
+    int fc = std::min(cols - 1, std::max(0, c + 2));
+    createCluster(TerrainType::Forest, fr, fc, 5);
 
-    // เสกภูเขาใกล้ๆ
-    int mountR = std::min(rows - 1, std::max(0, r + 2));
-    int mountC = std::min(cols - 1, std::max(0, c - 1));
-    createCluster(TerrainType::Mountain, mountR, mountC, 4);
+    int mr = std::min(rows - 1, std::max(0, r - 2));
+    int mc = std::min(cols - 1, std::max(0, c - 2));
+    createCluster(TerrainType::Mountain, mr, mc, 4);
 }
 
 void GameMap::createCluster(TerrainType type, int startR, int startC, int clusterSize) {
     std::vector<int> frontier;
-    int startIndex = startR * cols + startC;
-
-    if (startIndex >= 0 && startIndex < tiles.size()) {
-        tiles[startIndex].type = type;
-        frontier.push_back(startIndex);
+    int startIdx = startR * cols + startC;
+    if (startIdx >= 0 && startIdx < tiles.size()) {
+        tiles[startIdx].type = type;
+        frontier.push_back(startIdx);
     }
 
     int currentSize = 1;
     while (currentSize < clusterSize && !frontier.empty()) {
-        int randIndex = rand() % frontier.size();
-        int centerIndex = frontier[randIndex];
-        int centerR = centerIndex / cols;
-        int centerC = centerIndex % cols;
+        int randIdx = std::rand() % frontier.size();
+        int centerIdx = frontier[randIdx];
+        int cr = centerIdx / cols;
+        int cc = centerIdx % cols;
 
-        // สุ่มทิศทาง
-        int moveR = (rand() % 3) - 1;
-        int moveC = (rand() % 3) - 1;
-        int newR = centerR + moveR;
-        int newC = centerC + moveC;
+        int moveR = (std::rand() % 3) - 1;
+        int moveC = (std::rand() % 3) - 1;
+        int nr = cr + moveR;
+        int nc = cc + moveC;
 
-        if (newR >= 0 && newR < rows && newC >= 0 && newC < cols) {
-            int newIndex = newR * cols + newC;
-            // ทับได้เฉพาะหญ้า
-            if (tiles[newIndex].type == TerrainType::Grass) {
-                tiles[newIndex].type = type;
-                frontier.push_back(newIndex);
+        if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+            int nIdx = nr * cols + nc;
+            if (tiles[nIdx].type == TerrainType::Grass) {
+                tiles[nIdx].type = type;
+                frontier.push_back(nIdx);
                 currentSize++;
             }
         }
@@ -212,60 +159,168 @@ void GameMap::createCluster(TerrainType type, int startR, int startC, int cluste
 }
 
 // --------------------------------------------------------
-// 5. Visual & Render Logic
+// Pathfinding & Visibility
+// --------------------------------------------------------
+void GameMap::revealFog(int centerR, int centerC, int sightRange) {
+    bool changed = false;
+    for (auto& tile : tiles) {
+        // สูตรระยะห่างวงกลม (Axial Distance)
+        int r1 = centerR;
+        int c1 = centerC - (centerR - (centerR & 1)) / 2;
+        int r2 = tile.gridR;
+        int c2 = tile.gridC - (tile.gridR - (tile.gridR & 1)) / 2;
+        int dist = (std::abs(r1 - r2) + std::abs(c1 - c2) + std::abs((r1 - r2) + (c1 - c2))) / 2;
+
+        if (dist <= sightRange) {
+            // เปิดหมอก (Explored) และทำให้มองเห็น (Visible)
+            if (!tile.isExplored || !tile.isVisible) {
+                tile.isExplored = true;
+                tile.isVisible = true;
+                changed = true;
+            }
+        }
+        else {
+            // นอกระยะสายตา -> ปิดการมองเห็น (แต่ยัง Explored อยู่ถ้าเคยเดินผ่าน)
+            if (tile.isVisible) {
+                tile.isVisible = false;
+                changed = true;
+            }
+        }
+    }
+    if (changed) updateColors();
+}
+
+void GameMap::calculateValidMoves(int startR, int startC, int moveRange) {
+    clearHighlight();
+
+    std::vector<bool> visited(rows * cols, false);
+    std::queue<Node> q;
+    q.push({ startR, startC, 0 });
+    visited[startR * cols + startC] = true;
+
+    int evenDir[6][2] = { {-1,-1}, {-1,0}, {0,-1}, {0,1}, {1,-1}, {1,0} };
+    int oddDir[6][2] = { {-1,0}, {-1,1}, {0,-1}, {0,1}, {1,0}, {1,1} };
+
+    while (!q.empty()) {
+        Node curr = q.front();
+        q.pop();
+
+        if (curr.cost > 0) {
+            int idx = curr.r * cols + curr.c;
+            tiles[idx].isPath = true; // Highlight
+        }
+
+        if (curr.cost >= moveRange) continue;
+
+        for (int i = 0; i < 6; ++i) {
+            int nr, nc;
+            if (curr.r % 2 == 0) {
+                nr = curr.r + evenDir[i][0];
+                nc = curr.c + evenDir[i][1];
+            }
+            else {
+                nr = curr.r + oddDir[i][0];
+                nc = curr.c + oddDir[i][1];
+            }
+
+            if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
+                int nIdx = nr * cols + nc;
+
+                // กฎการเดิน: ไม่เคยไป + ไม่ใช่เขา/น้ำ + ต้องมองเห็นอยู่ (isVisible)
+                if (!visited[nIdx] &&
+                    tiles[nIdx].type != TerrainType::Mountain &&
+                    tiles[nIdx].type != TerrainType::Water &&
+                    tiles[nIdx].isVisible) { // <--- เช็คตรงนี้
+
+                    visited[nIdx] = true;
+                    q.push({ nr, nc, curr.cost + 1 });
+                }
+            }
+        }
+    }
+}
+
+void GameMap::clearHighlight() {
+    for (auto& tile : tiles) tile.isPath = false;
+}
+
+bool GameMap::isValidMove(int r, int c) {
+    int idx = r * cols + c;
+    if (idx >= 0 && idx < tiles.size()) {
+        return tiles[idx].isPath;
+    }
+    return false;
+}
+
+// --------------------------------------------------------
+// Graphics & Visuals
 // --------------------------------------------------------
 void GameMap::updateColors() {
     for (auto& tile : tiles) {
         if (!tile.isExplored) {
-            // ยังไม่เปิดแมพ -> สีดำ
+            // ยังไม่เคยมา -> ดำมืด
             tile.shape.setFillColor(sf::Color(10, 10, 10));
             tile.shape.setOutlineColor(sf::Color(20, 20, 20));
         }
+        else if (!tile.isVisible) {
+            // เคยมาแต่ตอนนี้มองไม่เห็น -> สีเทาๆ (Fog of War)
+            sf::Color c;
+            switch (tile.type) {
+            case TerrainType::Grass: c = sf::Color(50, 100, 50); break;
+            case TerrainType::Water: c = sf::Color(25, 50, 100); break;
+            case TerrainType::Mountain: c = sf::Color(60, 60, 60); break;
+            case TerrainType::Forest: c = sf::Color(17, 70, 17); break;
+            }
+            tile.shape.setFillColor(c);
+            tile.shape.setOutlineColor(sf::Color(30, 30, 30));
+        }
         else {
-            // เปิดแมพแล้ว -> สีจริง
-            sf::Color color;
-            if (tile.type == TerrainType::Grass) color = sf::Color(100, 200, 100);
-            else if (tile.type == TerrainType::Water) color = sf::Color(50, 100, 200);
-            else if (tile.type == TerrainType::Mountain) color = sf::Color(120, 120, 120);
-            else if (tile.type == TerrainType::Forest) color = sf::Color(34, 139, 34);
-
-            tile.shape.setFillColor(color);
+            // มองเห็นชัดเจน -> สีสดใส
+            sf::Color c;
+            switch (tile.type) {
+            case TerrainType::Grass: c = sf::Color(100, 200, 100); break;
+            case TerrainType::Water: c = sf::Color(50, 100, 200); break;
+            case TerrainType::Mountain: c = sf::Color(120, 120, 120); break;
+            case TerrainType::Forest: c = sf::Color(34, 139, 34); break;
+            }
+            tile.shape.setFillColor(c);
             tile.shape.setOutlineColor(sf::Color(30, 30, 30));
         }
     }
 }
 
-void GameMap::revealFog(int centerR, int centerC, int radius) {
-    bool somethingChanged = false;
-
+void GameMap::updateHighlight(sf::Vector2f mousePos) {
     for (auto& tile : tiles) {
-        // แปลงเป็น Axial Coordinates (q, r)
-        int r1 = centerR;
-        int c1 = centerC - (centerR - (centerR & 1)) / 2;
+        tile.isHovered = tile.shape.getGlobalBounds().contains(mousePos);
+    }
+}
 
-        int r2 = tile.gridR;
-        int c2 = tile.gridC - (tile.gridR - (tile.gridR & 1)) / 2;
+void GameMap::draw(sf::RenderWindow& window) {
+    for (const auto& tile : tiles) {
+        window.draw(tile.shape);
+    }
 
-        // คำนวณความต่าง
-        int dr = r1 - r2;
-        int dc = c1 - c2;
-
-        // สูตรระยะห่าง: (|dr| + |dc| + |dr + dc|) / 2
-        int distance = (std::abs(dr) + std::abs(dc) + std::abs(dr + dc)) / 2;
-
-        // -----------------------------------------------------------
-
-        // ถ้าอยู่ในระยะวงกลม (Hex Circle)
-        if (distance <= radius) {
-            if (!tile.isExplored) {
-                tile.isExplored = true;
-                somethingChanged = true;
-            }
+    // วาดช่องทางเดิน (Highlight สีเขียว)
+    for (const auto& tile : tiles) {
+        if (tile.isPath) {
+            sf::ConvexShape h = tile.shape;
+            h.setFillColor(sf::Color(0, 255, 0, 100));
+            h.setOutlineColor(sf::Color::Green);
+            h.setOutlineThickness(2.0f);
+            window.draw(h);
         }
     }
 
-    if (somethingChanged) {
-        updateColors();
+    // วาดกรอบเมาส์ชี้ (Mouse Hover)
+    for (const auto& tile : tiles) {
+        if (tile.isHovered && tile.isExplored) {
+            sf::ConvexShape h = tile.shape;
+            h.setFillColor(sf::Color::Transparent);
+            h.setOutlineColor(sf::Color::White);
+            h.setOutlineThickness(3.0f);
+            window.draw(h);
+            break;
+        }
     }
 }
 
@@ -275,43 +330,8 @@ sf::ConvexShape GameMap::createHexShape(float x, float y, TerrainType type) {
     for (int i = 0; i < 6; ++i) {
         float angle = 60.0f * i - 30.0f;
         float rad = angle * (PI / 180.0f);
-        hex.setPoint(i, sf::Vector2f(x + HEX_SIZE * cos(rad), y + HEX_SIZE * sin(rad)));
+        hex.setPoint(i, sf::Vector2f(x + HEX_SIZE * std::cos(rad), y + HEX_SIZE * std::sin(rad)));
     }
-
-    // กำหนดสีตามประเภทพื้นที่
-    if (type == TerrainType::Grass) hex.setFillColor(sf::Color(100, 200, 100)); // เขียว
-    else if (type == TerrainType::Water) hex.setFillColor(sf::Color(50, 100, 200)); // ฟ้า
-    else if (type == TerrainType::Mountain) hex.setFillColor(sf::Color(120, 120, 120)); // เทา
-
-    hex.setOutlineColor(sf::Color(30, 30, 30)); // ขอบดำจางๆ
     hex.setOutlineThickness(-1.0f);
-
     return hex;
-}
-
-void GameMap::draw(sf::RenderWindow& window) {
-    for (const auto& tile : tiles) {
-        window.draw(tile.shape);
-    }
-    for (const auto& tile : tiles) {
-        // เพิ่มเงื่อนไข && tile.isExplored เข้าไป
-        // ต้องเมาส์ชี้ AND ต้องเปิดแมพแล้ว ถึงจะขึ้นกรอบขาว
-        if (tile.isHovered && tile.isExplored) {
-            sf::ConvexShape highlightShape = tile.shape;
-            highlightShape.setOutlineColor(sf::Color::White);
-            highlightShape.setOutlineThickness(4.0f);
-            // ต้องทำให้ไส้ในโปร่งใส ไม่งั้นสีขาวจะบังสีดำ/สีเขียวเดิม
-            highlightShape.setFillColor(sf::Color::Transparent);
-
-            window.draw(highlightShape);
-            break;
-        }
-    }
-}
-
-void GameMap::updateHighlight(sf::Vector2f mousePos) {
-    for (auto& tile : tiles) {
-        if (tile.shape.getGlobalBounds().contains(mousePos)) tile.isHovered = true;
-        else tile.isHovered = false;
-    }
 }
