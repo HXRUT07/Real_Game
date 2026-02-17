@@ -354,16 +354,3 @@ sf::ConvexShape GameMap::createHexShape(float x, float y, TerrainType type) {
     hex.setOutlineThickness(-1.0f);
     return hex;
 }
-
-// ในไฟล์ GameMap.cpp (วางต่อท้ายสุด)
-
-HexTile* GameMap::getTile(int r, int c) {
-    // เช็คว่าพิกัดอยู่ในขอบเขต Map หรือไม่
-    if (r >= 0 && r < rows && c >= 0 && c < cols) {
-        int index = r * cols + c;
-        if (index >= 0 && index < tiles.size()) {
-            return &tiles[index]; // ส่งตัวจริง (Pointer) กลับไปแก้ไขค่าได้
-        }
-    }
-    return nullptr; // ถ้าหาไม่เจอ
-}
