@@ -34,11 +34,10 @@ GameMap::GameMap(int r, int c) {
 
             // [TRICK] ให้เป็น True ไว้ก่อน เพื่อให้ผู้เล่นเห็นกระดานเปล่าๆ ตอนเลือกจุด
             tile.isExplored = true;
-
+            tile.city = nullptr;
             tiles.push_back(tile);
         }
     }
-
     // อัปเดตสีครั้งแรก (จะเป็นสีเขียวล้วน)
     updateColors();
 }
@@ -111,16 +110,18 @@ void GameMap::startGame(int spawnR, int spawnC) {
     revealFog(spawnR, spawnC, 1);
 
     // >>> CITY PART <<<
-    if (spawnIndex >= 0 && spawnIndex < tiles.size()) {
-        tiles[spawnIndex].city = new City(
-            spawnR,
-            spawnC,
-            tiles[spawnIndex].shape.getPosition()
-        );
+    sf::FloatRect bounds = tiles[spawnIndex].shape.getGlobalBounds();
 
-        tiles[spawnIndex].city->addBuilding(BuildingType::Sawmill);
-        tiles[spawnIndex].city->addBuilding(BuildingType::Barracks);
-    }
+    sf::Vector2f centerPos(
+        bounds.left + bounds.width / 2.f,
+        bounds.top + bounds.height / 2.f
+    );
+
+    tiles[spawnIndex].city = new City(
+        spawnR,
+        spawnC,
+        centerPos
+    );
 
     // F. อัปเดตสีทั้งหมดใหม่ (วาดป่า/เขา และวาดสีดำทับส่วนที่ยังไม่เปิด)
     updateColors();
@@ -292,6 +293,11 @@ sf::ConvexShape GameMap::createHexShape(float x, float y, TerrainType type) {
 void GameMap::draw(sf::RenderWindow& window) {
     for (const auto& tile : tiles) {
         window.draw(tile.shape);
+    }
+    for (const auto& tile : tiles) {
+        if (tile.city != nullptr) {
+            tile.city->draw(window);
+        }
     }
     for (const auto& tile : tiles) {
         // เพิ่มเงื่อนไข && tile.isExplored เข้าไป
