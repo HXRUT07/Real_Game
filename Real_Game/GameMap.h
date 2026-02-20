@@ -25,13 +25,12 @@ struct HexTile {
 
     // [สำคัญ] ต้องมีตัวนี้ครับ ไม่งั้น Error!
     bool isVisible = false;   // มองเห็นอยู่ไหม (ในระยะสายตา)
-    bool isPath = false;      // เป็นช่องทางเดินที่เลือกได้หรือไม่ (สีเขียว)
+    bool isPath = false;
 
-    // --- [NEW] ส่วนเก็บข้อมูลทรัพยากร (เพิ่มตรงนี้เพื่อให้จำค่าได้) ---
-    bool hasResourcesGenerated = false; // เช็คว่าเคยสุ่มของหรือยัง
-    int storedWood = 0;
-    int storedGold = 0;
-    int storedFood = 0;
+    // --- เพิ่มใหม่ ---
+    int gold = 0;
+    int wood = 0;
+    int food = 0;
 };
 
 class GameMap {

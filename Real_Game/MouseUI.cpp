@@ -11,9 +11,9 @@ MouseUI::MouseUI() {
 
     // กำหนดค่าเริ่มต้น
     isPanelVisible = false;
-    m_showSidePanel = false; // [ใหม่] เริ่มต้นปิดแถบขวาไว้ก่อน
+    m_showSidePanel = false; //  เริ่มต้นปิดแถบขวาไว้ก่อน
 
-    // ตั้งค่า Resource Panel (อันเดิม)
+    // ตั้งค่า Resource Panel 
     infoPanel.setSize(sf::Vector2f(220.f, 140.f));
     infoPanel.setFillColor(sf::Color(30, 30, 30, 220));
     infoPanel.setOutlineThickness(2.f);
@@ -27,25 +27,11 @@ MouseUI::MouseUI() {
 }
 
 // ---------------------------------------------------------
-// ส่วนจัดการ Resource Panel (โค้ดเดิมของคุณ)
+// ส่วนจัดการ Resource Panel 
 // ---------------------------------------------------------
 void MouseUI::showResourcePanel(float windowWidth, int gold, int wood, int food) {
-    std::array<int, 3> values = { 0, 0, 0 };
-
-    std::random_device rd;
-    std::mt19937 gen(rd());
-    std::uniform_int_distribution<> dist(10, 99);
-
-    values[0] = dist(gen);
-    do { values[1] = dist(gen); } while (values[1] == values[0]);
-    do { values[2] = dist(gen); } while (values[2] == values[0] || values[2] == values[1]);
-
-    gold = values[0];
-    wood = values[1];
-    food = values[2];
-
     isPanelVisible = true;
-    m_showSidePanel = false; // [ใหม่] ถ้าเปิดดู Resource ให้ปิดแถบยูนิตบังตา
+    m_showSidePanel = false; // ปิดแถบทหารเผื่อเปิดค้างไว้
 
     float padding = 20.f;
     float posX = windowWidth - infoPanel.getSize().x - padding;
@@ -54,6 +40,7 @@ void MouseUI::showResourcePanel(float windowWidth, int gold, int wood, int food)
     infoPanel.setPosition(posX, posY);
     infoContent.setPosition(posX + 14.f, posY + 12.f);
 
+    // เอาค่าที่รับมาจาก main.cpp มาโชว์เลย ไม่ต้องสุ่มใหม่แล้ว
     infoContent.setString(
         "Resources in this area\n"
         "\n"
@@ -68,7 +55,7 @@ void MouseUI::hideInfo() {
 }
 
 // ---------------------------------------------------------
-// [ใหม่] ส่วนจัดการ Side Panel (รายชื่อยูนิต)
+//  ส่วนจัดการ Side Panel (รายชื่อยูนิต)
 // ---------------------------------------------------------
 void MouseUI::setSelectionList(const std::vector<Unit*>& units) {
     m_selectedUnits = units;

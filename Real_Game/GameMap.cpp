@@ -4,6 +4,7 @@
 #include <algorithm>
 #include <cmath>
 #include <iostream>
+#include "ResourceManage.h"
 #include <queue> // <--- [สำคัญมาก] ต้องมีบรรทัดนี้ ไม่งั้น Error std::queue
 
 const float PI = 3.14159265f;
@@ -104,6 +105,14 @@ void GameMap::startGame(int spawnR, int spawnC) {
     for (auto& tile : tiles) {
         tile.isExplored = false;
         tile.isVisible = false;
+    }
+
+    // ให้ ResourceManage สุ่มของใส่ทุกช่อง
+    for (auto& tile : tiles) {
+        ResourceYield yield = ResourceManage::generateResources(tile.type);
+        tile.gold = yield.gold;
+        tile.wood = yield.wood;
+        tile.food = yield.food;
     }
 
     // เปิดหมอกจุดเกิด

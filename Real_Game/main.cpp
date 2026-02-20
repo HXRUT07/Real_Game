@@ -65,47 +65,24 @@ int main() {
                 sf::Vector2f uiPos = window.mapPixelToCoords(pixelPos, window.getDefaultView()); // ตำแหน่งสำหรับ UI
 
                 if (event.mouseButton.button == sf::Mouse::Right) {
-                    // คลิกขวา: ยกเลิกการเลือก และ แสดง Resource Panel
+                    // 1. ยกเลิกการเลือกทหารและไฮไลท์
                     gui.clearSelection();
                     selectedUnit = nullptr;
                     worldMap.clearHighlight();
 
-                    // --- ส่วนคำนวณทรัพยากร (Resource Integration) ---
-                    int r_res = 0, c_res = 0;
+                    // 2. ดึงข้อมูลทรัพยากรจากช่องที่คลิก
+                    int r = 0, c = 0;
+                    if (worldMap.getGridCoords(worldPos, r, c)) {
+                        HexTile* clickedTile = worldMap.getTile(r, c);
 
-                    // 1. เช็คว่าคลิกโดน Grid จริงๆ หรือไม่
-                    if (worldMap.getGridCoords(worldPos, r_res, c_res)) {
-
-                        // --- [UPDATED] ระบบ Lock Resource (สุ่มครั้งเดียวจำตลอดไป) ---
-
-                        // 2. ดึง Pointer ของช่องนั้นมา (ตัวจริงจาก Memory)
-                        HexTile* tile = worldMap.getTile(r_res, c_res);
-
-                        if (tile != nullptr) {
-                            // 3. เช็คว่าเคยสุ่มของไปหรือยัง?
-                            if (tile->hasResourcesGenerated) {
-                                // A. เคยสุ่มแล้ว (LOAD OLD DATA): ให้ดึงค่าเดิมที่บันทึกไว้มาใช้เลย
-                                std::cout << "[LOAD] Tile (" << r_res << "," << c_res << ") - Loading stored resources." << std::endl;
-
-                                // ส่งค่าเดิมไปโชว์ที่ UI
-                                gui.showResourcePanel((float)window.getSize().x, tile->storedWood, tile->storedGold, tile->storedFood);
-                            }
-                            else {
-                                // B. ยังไม่เคยสุ่ม (GENERATE NEW): ให้สุ่มใหม่ แล้วบันทึกเก็บไว้ (Save)
-                                std::cout << "[NEW] Tile (" << r_res << "," << c_res << ") - Generating first time." << std::endl;
-
-                                // สุ่มทรัพยากรตามประเภทพื้นที่
-                                ResourceYield loot = ResourceManage::generateResources(tile->type);
-
-                                // บันทึกค่าลง Tile ทันที
-                                tile->storedWood = loot.wood;
-                                tile->storedGold = loot.gold;
-                                tile->storedFood = loot.food;
-                                tile->hasResourcesGenerated = true; // <--- ติ๊กถูกว่าช่องนี้มีของแล้ว ห้ามสุ่มใหม่
-
-                                // ส่งค่าใหม่ไปโชว์ที่ UI
-                                gui.showResourcePanel((float)window.getSize().x, loot.wood, loot.gold, loot.food);
-                            }
+                        // กฎ: ต้องมีช่องนี้อยู่จริง และ "ต้องเคยสำรวจแล้ว (isExplored)" เท่านั้น
+                        if (clickedTile != nullptr && clickedTile->isExplored) {
+                            // โชว์ข้อมูลทรัพยากรของช่องนั้น
+                            gui.showResourcePanel((float)window.getSize().x, clickedTile->gold, clickedTile->wood, clickedTile->food);
+                        }
+                        else {
+                            // ถ้าคลิกขวาใส่หมอกดำๆ ให้ปิดหน้าต่างทิ้ง
+                            gui.hideInfo();
                         }
                     }
                 }
