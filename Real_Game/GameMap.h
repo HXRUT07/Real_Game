@@ -2,6 +2,7 @@
 #include <SFML/Graphics.hpp>
 #include <vector>
 #include <cmath>
+#include "City.h"
 
 // ขนาดของ Hexagon
 const float HEX_SIZE = 30.0f;
@@ -59,6 +60,7 @@ public:
     HexTile* getTile(int r, int c);
 
 private:
+    std::vector<City> cities;
     std::vector<HexTile> tiles;
     int rows;
     int cols;

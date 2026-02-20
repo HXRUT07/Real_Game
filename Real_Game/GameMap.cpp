@@ -94,11 +94,23 @@ void GameMap::startGame(int spawnR, int spawnC) {
     if (m_gameStarted) return;
     m_gameStarted = true;
 
+    int idx = spawnR * cols + spawnC;
+    if (idx < 0 || idx >= tiles.size()) return;
+
+    // เอาจุด center ของ hex ที่คลิก
+    sf::FloatRect bounds = tiles[idx].shape.getGlobalBounds();
+    sf::Vector2f center(
+        bounds.left + bounds.width / 2.f,
+        bounds.top + bounds.height / 2.f
+    );
+
+    // สร้าง City (สี่เหลี่ยมฐาน)
+    cities.emplace_back(spawnR, spawnC, center);
+
     generateWorldResources();
     spawnStarterResources(spawnR, spawnC);
 
     // เคลียร์จุดเกิดให้เป็นหญ้า
-    int idx = spawnR * cols + spawnC;
     if (idx >= 0 && idx < tiles.size()) tiles[idx].type = TerrainType::Grass;
 
     // รีเซ็ตหมอกให้มืดทั้งโลก
@@ -327,7 +339,10 @@ void GameMap::draw(sf::RenderWindow& window) {
     for (const auto& tile : tiles) {
         window.draw(tile.shape);
     }
-
+    // วาดเมือง
+    for (auto& city : cities) {
+        city.draw(window);
+    }
     // วาดช่องทางเดิน (Highlight สีเขียว)
     for (const auto& tile : tiles) {
         if (tile.isPath) {
@@ -355,11 +370,17 @@ void GameMap::draw(sf::RenderWindow& window) {
 sf::ConvexShape GameMap::createHexShape(float x, float y, TerrainType type) {
     sf::ConvexShape hex;
     hex.setPointCount(6);
+
     for (int i = 0; i < 6; ++i) {
-        float angle = 60.0f * i - 30.0f;
-        float rad = angle * (PI / 180.0f);
-        hex.setPoint(i, sf::Vector2f(x + HEX_SIZE * std::cos(rad), y + HEX_SIZE * std::sin(rad)));
+        float angle = 60.f * i - 30.f;
+        float rad = angle * PI / 180.f;
+        hex.setPoint(i, sf::Vector2f(
+            HEX_SIZE * std::cos(rad),
+            HEX_SIZE * std::sin(rad)
+        ));
     }
-    hex.setOutlineThickness(-1.0f);
+
+    hex.setPosition(x, y);
+    hex.setOutlineThickness(-1.f);
     return hex;
 }
