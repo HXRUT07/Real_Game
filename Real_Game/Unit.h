@@ -5,7 +5,11 @@
 class Unit {
 public:
     // Constructor: รับชื่อเพิ่มเข้ามา
-    Unit(std::string name, int startR, int startC);
+    // รับ owner เพิ่มเข้ามา (1 = Player 1, 2 = Player 2)
+    Unit(std::string name, int startR, int startC, int owner);
+
+    // ฟังก์ชันดึงค่าเจ้าของ
+    int getOwner() const { return m_owner; }
 
     // วาดตัวละคร
     void draw(sf::RenderWindow& window);
@@ -33,6 +37,8 @@ public:
     bool isClicked(sf::Vector2f mousePos);
 
 private:
+    int m_owner;
+
     sf::CircleShape m_shape;
 
     std::string m_name; // ตัวแปรเก็บชื่อยูนิต

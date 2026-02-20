@@ -11,6 +11,7 @@
 #include "GameCamera.h"  // <--- GAME CAMERA SYSTEM (Yu)
 #include "Unit.h"        // <--- UNIT SYSTEM
 #include "ResourceManage.h" // <--- เพิ่ม Header ของระบบทรัพยากร
+#include "TurnManager.h"
 
 int main() {
     // ตั้งค่า Seed สำหรับการสุ่ม (ใส่ใน Main ทีเดียวจบ)
@@ -39,6 +40,7 @@ int main() {
     Unit* selectedUnit = nullptr;  // ตัวที่กำลังเลือกอยู่
     bool isGameRunning = false;    // ตัวแปรเช็คว่าจบช่วงเลือกจุดเกิดหรือยัง
     int unitNameCounter = 1;       // ตัวนับสำหรับตั้งชื่อ Unit อัตโนมัติ
+    TurnManager turnSys(2); // สร้างระบบเทิร์นสำหรับ 2 ผู้เล่น
 
     while (window.isOpen()) {
 
@@ -103,7 +105,8 @@ int main() {
                             int spawnR = 0, spawnC = 0;
                             // ต้องใช้ฟังก์ชัน getGridCoords ที่เพิ่มใน GameMap.h
                             if (worldMap.getGridCoords(worldPos, spawnR, spawnC)) {
-                                units.emplace_back("Commander", spawnR, spawnC); // ตั้งชื่อ Commander
+                                units.emplace_back("Commander", spawnR, spawnC, 1); // ตั้งชื่อ Commander
+                                units.emplace_back("Enemy", spawnR + 2, spawnC + 2, 2);
                                 std::cout << "Commander Spawned at " << spawnR << "," << spawnC << std::endl;
                             }
                         }
@@ -127,10 +130,11 @@ int main() {
                                 // ส่งรายการ Unit ไปให้ UI แสดงผลทางขวา
                                 gui.setSelectionList(stackInTile);
 
-                                // Auto-select: เลือกตัวแรกที่มี AP เหลือ
+                                // ตอนจะ Auto-select หาตัวที่มี AP ให้เพิ่มเงื่อนไขตรวจเช็คเจ้าของด้วย
                                 selectedUnit = nullptr;
                                 for (auto* u : stackInTile) {
-                                    if (u->hasAP()) {
+                                    // กฎ: ต้องมี AP และ "ต้องเป็นของ Player ปัจจุบันเท่านั้น!"
+                                    if (u->hasAP() && u->getOwner() == turnSys.getCurrentPlayer()) {
                                         selectedUnit = u;
                                         break;
                                     }
@@ -191,6 +195,22 @@ int main() {
                 if (event.key.code == sf::Keyboard::R) {
                     for (auto& u : units) u.resetAP();
                     std::cout << "Next Turn: All AP Reset" << std::endl;
+                }
+
+                if (event.type == sf::Event::KeyReleased) {
+                    // กด Enter เพื่อจบเทิร์น (จะทำงานตอนปล่อยนิ้วเท่านั้น)
+                    if (event.key.code == sf::Keyboard::Enter && isGameRunning) {
+
+                        turnSys.endTurn(units); // เรียกสลับเทิร์นและรีเซ็ต AP
+
+                        // เคลียร์ UI ที่เลือกค้างไว้
+                        gui.clearSelection();
+                        selectedUnit = nullptr;
+                        worldMap.clearHighlight();
+
+                        // ปริ้นบอกในหน้าต่างดำ (Console) ว่าตอนนี้ตาใคร จะได้ไม่งง
+                        std::cout << ">>> Switched to Player " << turnSys.getCurrentPlayer() << " <<<" << std::endl;
+                    }
                 }
             }
         }
