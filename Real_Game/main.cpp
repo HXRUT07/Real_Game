@@ -10,7 +10,7 @@
 #include "MouseUI.h"     // <--- USER INTERFACE MOUSE (PLAY)
 #include "GameCamera.h"  // <--- GAME CAMERA SYSTEM (Yu)
 #include "Unit.h"        // <--- UNIT SYSTEM
-#include "ResourceManage.h" // <--- [NEW] เพิ่ม Header ของระบบทรัพยากร
+#include "ResourceManage.h" // <--- เพิ่ม Header ของระบบทรัพยากร
 
 int main() {
     // ตั้งค่า Seed สำหรับการสุ่ม (ใส่ใน Main ทีเดียวจบ)
@@ -22,7 +22,7 @@ int main() {
 
     sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Hexa-Conquest", sf::Style::Fullscreen, settings);
 
-    // (แถม) จำกัดเฟรมเรตหน่อย เครื่องจะได้ไม่ทำงานหนักเกินไปตอน Fullscreen
+    // จำกัดเฟรมเรตหน่อย เครื่องจะได้ไม่ทำงานหนักเกินไปตอน Fullscreen
     window.setFramerateLimit(60);
 
     //----Map system----//(Yu)
@@ -210,14 +210,6 @@ int main() {
 
             // [DEBUG / TEST] Key Controls
             if (event.type == sf::Event::KeyPressed) {
-                // Spacebar: สุ่มเสก Unit เพิ่ม (เฉพาะตอนเริ่มเกมแล้ว)
-                if (event.key.code == sf::Keyboard::Space && isGameRunning) {
-                    int r = std::rand() % 50;
-                    int c = std::rand() % 50;
-                    std::string name = "Unit " + std::to_string(unitNameCounter++);
-                    units.emplace_back(name, r, c);
-                    std::cout << "Spawned new unit: " << name << " at " << r << "," << c << std::endl;
-                }
                 // R: รีเซ็ต AP ของทุก Unit (จำลองการจบ Turn)
                 if (event.key.code == sf::Keyboard::R) {
                     for (auto& u : units) u.resetAP();
@@ -239,7 +231,7 @@ int main() {
         // เราจะส่ง mousePos ไปให้ worldMap ตรวจสอบว่าชี้ที่ช่องไหน
         worldMap.updateHighlight(mousePos);
 
-        // อัปเดต UI (ไม่ได้ทำอะไรมากในตอนนี้ แต่ใส่ไว้ตามโครงสร้างเดิม)
+        // อัปเดต UI
         // gui.update(mousePosScreen); 
 
         window.clear(sf::Color(20, 20, 30)); // พื้นหลังสีน้ำเงินเข้มๆ เหมือนอวกาศ
