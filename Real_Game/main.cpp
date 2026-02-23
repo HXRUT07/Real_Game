@@ -111,10 +111,10 @@ int main() {
                             int spawnR = 0, spawnC = 0;
                             // ต้องใช้ฟังก์ชัน getGridCoords ที่เพิ่มใน GameMap.h
                             if (worldMap.getGridCoords(worldPos, spawnR, spawnC)) {
-                                // [อัปเดต] ใส่เลข 1 ด้านหลังเพื่อให้ตัวนี้เป็นของ Player 1 และสร้างศัตรู Player 2
+                                //  ใส่เลข 1 ด้านหลังเพื่อให้ตัวนี้เป็นของ Player 1 และสร้างศัตรู Player 2
                                 units.emplace_back("Commander", spawnR, spawnC, 1);
 
-                                // [อัปเดตดักบัค] ดันให้ศัตรูไปเกิดไกลๆ เลย (บวก 8 ช่อง) เพื่อให้ชัวร์ว่าอยู่ในหมอกแน่นอน
+                                // ดันให้ศัตรูไปเกิดไกลๆ เลย (บวก 8 ช่อง) เพื่อให้ชัวร์ว่าอยู่ในหมอกแน่นอน
                                 units.emplace_back("Enemy", spawnR + 8, spawnC + 8, 2);
 
                                 std::cout << "Commander Spawned at " << spawnR << "," << spawnC << std::endl;
@@ -129,7 +129,7 @@ int main() {
 
                             HexTile* clickedTile = worldMap.getTile(r, c);
 
-                            // [อัปเดตดักบัค] ถ้ายิงคลิกไปโดนหมอกดำ (มองไม่เห็น) ให้ตัดจบการทำงาน ถือว่าคลิกพื้นที่ว่างเปล่า!
+                            //  ถ้ายิงคลิกไปโดนหมอกดำ (มองไม่เห็น) ให้ตัดจบการทำงาน ถือว่าคลิกพื้นที่ว่างเปล่า!
                             if (clickedTile == nullptr || !clickedTile->isVisible) {
                                 gui.clearSelection();
                                 selectedUnit = nullptr;
@@ -218,7 +218,7 @@ int main() {
                 }
             }
 
-            // [แก้บัค] ใช้ KeyReleased (ปล่อยนิ้ว) และแก้จาก Enter เป็น Return
+            //  ใช้ KeyReleased (ปล่อยนิ้ว) และแก้จาก Enter เป็น Return
             if (event.type == sf::Event::KeyReleased) {
                 if (event.key.code == sf::Keyboard::Return && isGameRunning) { // <--- ลบ NumpadEnter ออกแล้ว
                     // กดจบเทิร์นได้เฉพาะตอนที่เป็นตาของเราเท่านั้น
@@ -234,7 +234,7 @@ int main() {
                     }
                 }
             }
-        } // <--- [แก้ไข] วงเล็บปิดของ while(window.pollEvent) ย้ายมาอยู่ตรงนี้
+        } // <---  วงเล็บปิดของ while(window.pollEvent) ย้ายมาอยู่ตรงนี้
 
         // -----------------------------------------------------------------------
         // ระบบสมอง AI (จะทำงานทันทีเมื่อเป็นตาของ Player 2)
@@ -297,7 +297,7 @@ int main() {
         gui.draw(window);
 
         window.display();
-    } // <--- [แก้ไข] วงเล็บปิดของ while(window.isOpen())
+    } // <---  วงเล็บปิดของ while(window.isOpen())
 
-    return 0; // <--- [แก้ไข] ย้าย return 0 มาไว้จุดล่างสุดนอกลูป
+    return 0; // <---  ย้าย return 0 มาไว้จุดล่างสุดนอกลูป
 }
