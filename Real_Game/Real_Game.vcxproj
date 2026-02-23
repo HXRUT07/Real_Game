@@ -152,6 +152,9 @@
     <ClInclude Include="TurnManager.h" />
     <ClInclude Include="Unit.h" />
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="C:\Users\USER\Downloads\U blue horse.jpg" />
+  </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">
   </ImportGroup>
