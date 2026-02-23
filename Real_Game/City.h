@@ -12,5 +12,11 @@ private:
 
 public:
     City(int r, int c, sf::Vector2f pos);
+
+    int getR() const { return gridR; }
+    int getC() const { return gridC; }
+
+    void addBuilding(BuildingType type);
     void draw(sf::RenderWindow& window);
+    std::string getCityInfo();
 };
