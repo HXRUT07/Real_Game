@@ -372,13 +372,18 @@ void GameMap::updateHighlight(sf::Vector2f mousePos) {
 }
 
 void GameMap::draw(sf::RenderWindow& window) {
-    // วาดพื้นหลัง
+    // วาดพื้นหลังกระเบื้อง
     for (const auto& tile : tiles) {
         window.draw(tile.shape);
     }
-    // วาดเมือง
+
+    //  วาดเมือง เฉพาะเมืองที่ถูกเปิดหมอก (isExplored) แล้วเท่านั้น!
     for (auto& city : cities) {
-        city.draw(window);
+        // เปลี่ยนจาก city.gridR เป็น city.getR()
+        HexTile* tile = getTile(city.getR(), city.getC());
+        if (tile != nullptr && tile->isExplored) {
+            city.draw(window);
+        }
     }
     // วาดช่องทางเดิน (Highlight สีเขียว)
     for (const auto& tile : tiles) {

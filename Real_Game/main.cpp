@@ -37,6 +37,10 @@ int main() {
 
     //----Unit System----//
     std::vector<Unit> units;       // เก็บยูนิตทั้งหมด
+
+    // จองพื้นที่ล่วงหน้า 1,000 ตัว ป้องกันบัค C++ ย้ายที่อยู่หน่วยความจำ (Memory Dangling)
+    units.reserve(1000);
+
     Unit* selectedUnit = nullptr;  // ตัวที่กำลังเลือกอยู่
     bool isGameRunning = false;    // ตัวแปรเช็คว่าจบช่วงเลือกจุดเกิดหรือยัง
     int unitNameCounter = 1;       // ตัวนับสำหรับตั้งชื่อ Unit อัตโนมัติ
@@ -61,7 +65,8 @@ int main() {
             // -----------------------------------------------------------------------
             // ส่วนตรวจสอบการคลิกซ้าย: เลือกจุดเกิด (Spawn) และ ควบคุมยูนิต (Gameplay)
             // -----------------------------------------------------------------------
-            if (event.type == sf::Event::MouseButtonPressed) {
+            // อนุญาตให้ผู้เล่นคลิกเมาส์สั่งการได้ เฉพาะตอนเป็นตาของ Player 1 เท่านั้น
+            if (event.type == sf::Event::MouseButtonPressed && turnSys.getCurrentPlayer() == 1) {
                 sf::Vector2i pixelPos = sf::Mouse::getPosition(window);
                 sf::Vector2f worldPos = window.mapPixelToCoords(pixelPos, camera.getView());
                 sf::Vector2f uiPos = window.mapPixelToCoords(pixelPos, window.getDefaultView()); // ตำแหน่งสำหรับ UI
@@ -105,9 +110,11 @@ int main() {
                             int spawnR = 0, spawnC = 0;
                             // ต้องใช้ฟังก์ชัน getGridCoords ที่เพิ่มใน GameMap.h
                             if (worldMap.getGridCoords(worldPos, spawnR, spawnC)) {
-                                // [อัปเดต] ใส่เลข 1 ด้านหลังเพื่อให้ตัวนี้เป็นของ Player 1 และสร้างศัตรู Player 2
                                 units.emplace_back("Commander", spawnR, spawnC, 1);
-                                units.emplace_back("Enemy", spawnR + 2, spawnC + 2, 2);
+
+                                // [อัปเดตดักบัค] ดันให้ศัตรูไปเกิดไกลๆ เลย (บวก 8 ช่อง) เพื่อให้ชัวร์ว่าอยู่ในหมอกแน่นอน
+                                units.emplace_back("Enemy", spawnR + 8, spawnC + 8, 2);
+
                                 std::cout << "Commander Spawned at " << spawnR << "," << spawnC << std::endl;
                             }
                         }
@@ -118,71 +125,79 @@ int main() {
                         // ตรวจสอบว่าคลิกโดนช่องไหนใน Grid
                         if (worldMap.getGridCoords(worldPos, r, c)) {
 
-                            // 1. หา Unit ทั้งหมดที่อยู่ในช่องนี้ (Stacking)
-                            std::vector<Unit*> stackInTile;
-                            for (auto& u : units) {
-                                if (u.getR() == r && u.getC() == c) {
-                                    stackInTile.push_back(&u);
-                                }
-                            }
+                            HexTile* clickedTile = worldMap.getTile(r, c);
 
-                            // กรณี A: คลิกโดนช่องที่มี Unit (เลือก Unit)
-                            if (!stackInTile.empty()) {
-                                // ส่งรายการ Unit ไปให้ UI แสดงผลทางขวา
-                                gui.setSelectionList(stackInTile);
-
-                                // ตอนจะ Auto-select หาตัวที่มี AP ให้เพิ่มเงื่อนไขตรวจเช็คเจ้าของด้วย
-                                selectedUnit = nullptr;
-                                for (auto* u : stackInTile) {
-                                    // กฎ: ต้องมี AP และ "ต้องเป็นของ Player ปัจจุบันเท่านั้น!"
-                                    if (u->hasAP() && u->getOwner() == turnSys.getCurrentPlayer()) {
-                                        selectedUnit = u;
-                                        break;
-                                    }
-                                }
-
-                                // ถ้าเลือกได้ ให้คำนวณและแสดงช่องเดิน
-                                if (selectedUnit) {
-                                    worldMap.calculateValidMoves(selectedUnit->getR(), selectedUnit->getC(), selectedUnit->getMoveRange());
-                                    std::cout << "Unit Selected: " << selectedUnit->getName() << std::endl;
-                                }
-                                else {
-                                    worldMap.clearHighlight(); // ไม่มีตัวไหนมี AP
-                                    std::cout << "All units in this stack have no AP or not your turn." << std::endl;
-                                }
-                            }
-                            // กรณี B: คลิกพื้นที่ว่าง และมี Unit ถูกเลือกอยู่ (สั่งเดิน)
-                            else if (selectedUnit != nullptr) {
-                                // ตรวจสอบว่าช่องเป้าหมายเดินไปได้หรือไม่ (สีเขียว)
-                                if (worldMap.isValidMove(r, c)) {
-                                    // 1. ย้ายตำแหน่ง
-                                    selectedUnit->moveTo(r, c);
-                                    // 2. หัก AP
-                                    selectedUnit->consumeAP(1);
-                                    // 3. เปิดหมอก (ระยะ 1 ช่อง)
-                                    worldMap.revealFog(r, c, 1);
-
-                                    // จบการเดิน: เคลียร์ไฮไลท์ และ ยกเลิกการเลือก
-                                    worldMap.clearHighlight();
-                                    gui.clearSelection(); // ปิดแถบขวา
-                                    selectedUnit = nullptr;
-                                    std::cout << "Unit Moved!" << std::endl;
-                                }
-                                else {
-                                    // เดินไม่ได้ (อาจจะติดสิ่งกีดขวาง หรือ อยู่นอกระยะ)
-                                    // ให้ยกเลิกการเลือกไปเลย หรือ จะแค่แจ้งเตือนก็ได้
-                                    // ในที่นี้เลือกที่จะยกเลิกการเลือกเพื่อความลื่นไหล
-                                    gui.clearSelection();
-                                    selectedUnit = nullptr;
-                                    worldMap.clearHighlight();
-                                    std::cout << "Cannot move! (Blocked or unseen)" << std::endl;
-                                }
-                            }
-                            // กรณี C: คลิกพื้นที่ว่างเปล่า โดยไม่มี Unit ถูกเลือก
-                            else {
+                            // [อัปเดตดักบัค] ถ้ายิงคลิกไปโดนหมอกดำ (มองไม่เห็น) ให้ตัดจบการทำงาน ถือว่าคลิกพื้นที่ว่างเปล่า!
+                            if (clickedTile == nullptr || !clickedTile->isVisible) {
                                 gui.clearSelection();
                                 selectedUnit = nullptr;
                                 worldMap.clearHighlight();
+                            }
+                            else {
+                                // 1. หา Unit ทั้งหมดที่อยู่ในช่องนี้ (Stacking)
+                                std::vector<Unit*> stackInTile;
+                                for (auto& u : units) {
+                                    if (u.getR() == r && u.getC() == c) {
+                                        stackInTile.push_back(&u);
+                                    }
+                                }
+
+                                // กรณี A: คลิกโดนช่องที่มี Unit (เลือก Unit)
+                                if (!stackInTile.empty()) {
+                                    // ส่งรายการ Unit ไปให้ UI แสดงผลทางขวา
+                                    gui.setSelectionList(stackInTile);
+
+                                    // ตอนจะ Auto-select หาตัวที่มี AP ให้เพิ่มเงื่อนไขตรวจเช็คเจ้าของด้วย
+                                    selectedUnit = nullptr;
+                                    for (auto* u : stackInTile) {
+                                        // กฎ: ต้องมี AP และ "ต้องเป็นของ Player ปัจจุบันเท่านั้น!"
+                                        if (u->hasAP() && u->getOwner() == turnSys.getCurrentPlayer()) {
+                                            selectedUnit = u;
+                                            break;
+                                        }
+                                    }
+
+                                    // ถ้าเลือกได้ ให้คำนวณและแสดงช่องเดิน
+                                    if (selectedUnit) {
+                                        worldMap.calculateValidMoves(selectedUnit->getR(), selectedUnit->getC(), selectedUnit->getMoveRange());
+                                        std::cout << "Unit Selected: " << selectedUnit->getName() << std::endl;
+                                    }
+                                    else {
+                                        worldMap.clearHighlight(); // ไม่มีตัวไหนมี AP
+                                        std::cout << "All units in this stack have no AP or not your turn." << std::endl;
+                                    }
+                                }
+                                // กรณี B: คลิกพื้นที่ว่าง และมี Unit ถูกเลือกอยู่ (สั่งเดิน)
+                                else if (selectedUnit != nullptr) {
+                                    // ตรวจสอบว่าช่องเป้าหมายเดินไปได้หรือไม่ (สีเขียว)
+                                    if (worldMap.isValidMove(r, c)) {
+                                        // 1. ย้ายตำแหน่ง
+                                        selectedUnit->moveTo(r, c);
+                                        // 2. หัก AP
+                                        selectedUnit->consumeAP(1);
+                                        // 3. เปิดหมอก (ระยะ 1 ช่อง)
+                                        worldMap.revealFog(r, c, 1);
+
+                                        // จบการเดิน: เคลียร์ไฮไลท์ และ ยกเลิกการเลือก
+                                        worldMap.clearHighlight();
+                                        gui.clearSelection(); // ปิดแถบขวา
+                                        selectedUnit = nullptr;
+                                        std::cout << "Unit Moved!" << std::endl;
+                                    }
+                                    else {
+                                        // เดินไม่ได้ (อาจจะติดสิ่งกีดขวาง หรือ อยู่นอกระยะ)
+                                        gui.clearSelection();
+                                        selectedUnit = nullptr;
+                                        worldMap.clearHighlight();
+                                        std::cout << "Cannot move! (Blocked or unseen)" << std::endl;
+                                    }
+                                }
+                                // กรณี C: คลิกพื้นที่ว่างเปล่า โดยไม่มี Unit ถูกเลือก
+                                else {
+                                    gui.clearSelection();
+                                    selectedUnit = nullptr;
+                                    worldMap.clearHighlight();
+                                }
                             }
                         }
                     }
@@ -199,19 +214,35 @@ int main() {
                 }
             }
 
-            // [แก้บัค] ใช้ KeyReleased (ปล่อยนิ้ว) และแก้จาก Enter เป็น Return
             if (event.type == sf::Event::KeyReleased) {
-                if (event.key.code == sf::Keyboard::Return && isGameRunning) {
-                    turnSys.endTurn(units); // เรียกสลับเทิร์นและรีเซ็ต AP
-
-                    // เคลียร์ UI ที่เลือกค้างไว้
-                    gui.clearSelection();
-                    selectedUnit = nullptr;
-                    worldMap.clearHighlight();
-
-                    std::cout << ">>> Switched to Player " << turnSys.getCurrentPlayer() << " <<<" << std::endl;
+                if (event.key.code == sf::Keyboard::Return && isGameRunning) { // <--- ลบ NumpadEnter ออกแล้ว
+                    // กดจบเทิร์นได้เฉพาะตอนที่เป็นตาของเราเท่านั้น
+                    if (turnSys.getCurrentPlayer() == 1) {
+                        turnSys.endTurn(units);
+                        gui.clearSelection();
+                        selectedUnit = nullptr;
+                        worldMap.clearHighlight();
+                        std::cout << ">>> Switched to AI (Player 2) <<<" << std::endl;
+                    }
                 }
             }
+
+        // -----------------------------------------------------------------------
+        // ระบบสมอง AI (จะทำงานทันทีเมื่อเป็นตาของ Player 2)
+        // -----------------------------------------------------------------------
+        if (isGameRunning && turnSys.getCurrentPlayer() == 2) {
+            std::cout << "AI is processing..." << std::endl;
+
+            // ตอนนี้เราให้ AI ข้ามเทิร์นตัวเองไปก่อน 
+            for (auto& u : units) {
+                if (u.getOwner() == 2) {
+                    u.consumeAP(u.getCurrentAP()); // สั่งให้ศัตรูใช้ AP จนหมด
+                }
+            }
+
+            // AI จบเทิร์น โยนกลับให้ผู้เล่น 1 ทันที
+            turnSys.endTurn(units);
+            std::cout << ">>> Switched to Player 1 <<<" << std::endl;
         }
 
         // 4. อัปเดตกล้อง (คำนวณการเลื่อน)
@@ -228,17 +259,27 @@ int main() {
         worldMap.updateHighlight(mousePos);
 
         // อัปเดต UI
-        // gui.update(mousePosScreen); 
-
         window.clear(sf::Color(20, 20, 30)); // พื้นหลังสีน้ำเงินเข้มๆ เหมือนอวกาศ
 
         // สั่งวาด Map แค่บรรทัดเดียว!
         window.setView(camera.getView()); // ใช้ View กล้องวาดแมพ
         worldMap.draw(window);
 
-        // --- วาดทหาร (ต้องวาดหลังจาก Map แต่อยู่ใน View ของกล้อง) ---
+        // -----------------------------------------------------------------------
+        //  ระบบพรางตาศัตรู (วาดเฉพาะตัวที่อยู่ในระยะมองเห็น)
+        // -----------------------------------------------------------------------
         for (auto& unit : units) {
-            unit.draw(window);
+            if (unit.getOwner() == 1) {
+                // ตัวเรา (Player 1) วาดเสมอ
+                unit.draw(window);
+            }
+            else {
+                // ศัตรู (Player 2) เช็คให้ชัวร์ว่าช่องนั้นสว่างอยู่จริงๆ
+                HexTile* tile = worldMap.getTile(unit.getR(), unit.getC());
+                if (tile != nullptr && tile->isVisible) {
+                    unit.draw(window); // วาดก็ต่อเมื่ออยู่ในไฟสว่าง (isVisible)
+                }
+            }
         }
 
         window.setView(window.getDefaultView()); // คืนค่า View ปกติเพื่อวาด UI ทับข้างบนสุด
