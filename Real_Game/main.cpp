@@ -11,7 +11,7 @@
 #include "GameCamera.h"  // <--- GAME CAMERA SYSTEM (Yu)
 #include "Unit.h"        // <--- UNIT SYSTEM
 #include "ResourceManage.h" // <--- เพิ่ม Header ของระบบทรัพยากร
-#include "TurnManager.h"
+#include "TurnManager.h" // <--- ระบบเทิร์น
 
 int main() {
     // ตั้งค่า Seed สำหรับการสุ่ม (ใส่ใน Main ทีเดียวจบ)
@@ -105,7 +105,8 @@ int main() {
                             int spawnR = 0, spawnC = 0;
                             // ต้องใช้ฟังก์ชัน getGridCoords ที่เพิ่มใน GameMap.h
                             if (worldMap.getGridCoords(worldPos, spawnR, spawnC)) {
-                                units.emplace_back("Commander", spawnR, spawnC, 1); // ตั้งชื่อ Commander
+                                // [อัปเดต] ใส่เลข 1 ด้านหลังเพื่อให้ตัวนี้เป็นของ Player 1 และสร้างศัตรู Player 2
+                                units.emplace_back("Commander", spawnR, spawnC, 1);
                                 units.emplace_back("Enemy", spawnR + 2, spawnC + 2, 2);
                                 std::cout << "Commander Spawned at " << spawnR << "," << spawnC << std::endl;
                             }
@@ -147,7 +148,7 @@ int main() {
                                 }
                                 else {
                                     worldMap.clearHighlight(); // ไม่มีตัวไหนมี AP
-                                    std::cout << "All units in this stack have no AP." << std::endl;
+                                    std::cout << "All units in this stack have no AP or not your turn." << std::endl;
                                 }
                             }
                             // กรณี B: คลิกพื้นที่ว่าง และมี Unit ถูกเลือกอยู่ (สั่งเดิน)
@@ -196,21 +197,19 @@ int main() {
                     for (auto& u : units) u.resetAP();
                     std::cout << "Next Turn: All AP Reset" << std::endl;
                 }
+            }
 
-                if (event.type == sf::Event::KeyReleased) {
-                    // กด Enter เพื่อจบเทิร์น (จะทำงานตอนปล่อยนิ้วเท่านั้น)
-                    if (event.key.code == sf::Keyboard::Enter && isGameRunning) {
+            // [แก้บัค] ใช้ KeyReleased (ปล่อยนิ้ว) และแก้จาก Enter เป็น Return
+            if (event.type == sf::Event::KeyReleased) {
+                if (event.key.code == sf::Keyboard::Return && isGameRunning) {
+                    turnSys.endTurn(units); // เรียกสลับเทิร์นและรีเซ็ต AP
 
-                        turnSys.endTurn(units); // เรียกสลับเทิร์นและรีเซ็ต AP
+                    // เคลียร์ UI ที่เลือกค้างไว้
+                    gui.clearSelection();
+                    selectedUnit = nullptr;
+                    worldMap.clearHighlight();
 
-                        // เคลียร์ UI ที่เลือกค้างไว้
-                        gui.clearSelection();
-                        selectedUnit = nullptr;
-                        worldMap.clearHighlight();
-
-                        // ปริ้นบอกในหน้าต่างดำ (Console) ว่าตอนนี้ตาใคร จะได้ไม่งง
-                        std::cout << ">>> Switched to Player " << turnSys.getCurrentPlayer() << " <<<" << std::endl;
-                    }
+                    std::cout << ">>> Switched to Player " << turnSys.getCurrentPlayer() << " <<<" << std::endl;
                 }
             }
         }

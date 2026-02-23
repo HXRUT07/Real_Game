@@ -68,13 +68,34 @@ HexTile* GameMap::getTile(int r, int c) {
 }
 
 bool GameMap::getGridCoords(sf::Vector2f mousePos, int& outR, int& outC) {
-    for (const auto& tile : tiles) {
-        if (tile.shape.getGlobalBounds().contains(mousePos)) {
-            outR = tile.gridR;
-            outC = tile.gridC;
-            return true;
+    float minDist = 999999.0f;
+    HexTile* closestTile = nullptr;
+
+    for (auto& tile : tiles) {
+        // 1. หาจุดศูนย์กลางของหกเหลี่ยม
+        sf::FloatRect bounds = tile.shape.getGlobalBounds();
+        float centerX = bounds.left + bounds.width / 2.0f;
+        float centerY = bounds.top + bounds.height / 2.0f;
+
+        // 2. คำนวณระยะห่างจากเมาส์ไปยังจุดศูนย์กลาง
+        float dx = mousePos.x - centerX;
+        float dy = mousePos.y - centerY;
+        float dist = std::sqrt(dx * dx + dy * dy);
+
+        // 3. จำช่องที่ใกล้เมาส์ที่สุดเอาไว้
+        if (dist < minDist) {
+            minDist = dist;
+            closestTile = &tile;
         }
     }
+
+    // ถ้าระยะห่างน้อยกว่าขนาดของหกเหลี่ยม แปลว่าคลิกโดนช่องนั้นจริงๆ
+    if (closestTile && minDist <= HEX_SIZE) {
+        outR = closestTile->gridR;
+        outC = closestTile->gridC;
+        return true;
+    }
+
     return false;
 }
 
@@ -323,14 +344,30 @@ void GameMap::updateColors() {
 }
 
 void GameMap::updateHighlight(sf::Vector2f mousePos) {
+    float minDist = 999999.0f;
+    HexTile* closestTile = nullptr;
+
+    // รีเซ็ตการชี้เมาส์ทุกช่องก่อน และหาช่องที่ใกล้เมาส์ที่สุด
     for (auto& tile : tiles) {
-        // เช็คเมาส์ hover (เฉพาะช่องที่เปิดแล้วถึงจะยอมให้ hover)
-        if (tile.isExplored) {
-            tile.isHovered = tile.shape.getGlobalBounds().contains(mousePos);
+        tile.isHovered = false; // ปิดกรอบขาวทุกช่อง
+
+        sf::FloatRect bounds = tile.shape.getGlobalBounds();
+        float centerX = bounds.left + bounds.width / 2.0f;
+        float centerY = bounds.top + bounds.height / 2.0f;
+
+        float dx = mousePos.x - centerX;
+        float dy = mousePos.y - centerY;
+        float dist = std::sqrt(dx * dx + dy * dy);
+
+        if (dist < minDist) {
+            minDist = dist;
+            closestTile = &tile;
         }
-        else {
-            tile.isHovered = false;
-        }
+    }
+
+    // สั่งเปิดกรอบขาวเฉพาะช่องที่ใกล้เมาส์ที่สุดช่องเดียว
+    if (closestTile && minDist <= HEX_SIZE) {
+        closestTile->isHovered = true;
     }
 }
 
