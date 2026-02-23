@@ -21,8 +21,8 @@ private:
 public:
     MouseUI(); // Constructor
 
-    // ฟังก์ชันเดิม
-    void showResourcePanel(float windowWidth, int gold, int wood, int food);
+    // ฟังก์ชันเดิม (ปรับลำดับเป็น wood, gold, food ให้ตรงกับ main.cpp)
+    void showResourcePanel(float windowWidth, int wood, int gold, int food);
     void hideInfo();
 
     // ฟังก์ชันจัดการแถบขวา

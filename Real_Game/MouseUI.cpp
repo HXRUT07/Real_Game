@@ -29,7 +29,10 @@ MouseUI::MouseUI() {
 // ---------------------------------------------------------
 // ส่วนจัดการ Resource Panel (โค้ดเดิมของคุณ)
 // ---------------------------------------------------------
-void MouseUI::showResourcePanel(float windowWidth, int gold, int wood, int food) {
+void MouseUI::showResourcePanel(float windowWidth, int wood, int gold, int food) {
+
+    // [ปิดการสุ่มทิ้งทั้งหมด เพื่อให้ใช้ค่าที่ main.cpp ส่งมาตรงๆ แทน]
+    /*
     std::array<int, 3> values = { 0, 0, 0 };
 
     std::random_device rd;
@@ -43,6 +46,7 @@ void MouseUI::showResourcePanel(float windowWidth, int gold, int wood, int food)
     gold = values[0];
     wood = values[1];
     food = values[2];
+    */
 
     isPanelVisible = true;
     m_showSidePanel = false; // [ใหม่] ถ้าเปิดดู Resource ให้ปิดแถบยูนิตบังตา
