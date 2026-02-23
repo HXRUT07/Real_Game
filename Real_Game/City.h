@@ -7,13 +7,10 @@
 class City {
 private:
     int gridR, gridC;
-    sf::Vector2f worldPos;
-    std::vector<Building> buildings;
+    sf::Vector2f center;
+    sf::RectangleShape baseIcon;   // สี่เหลี่ยมแทนฐาน
 
 public:
     City(int r, int c, sf::Vector2f pos);
-
-    void addBuilding(BuildingType type);
     void draw(sf::RenderWindow& window);
-    std::string getCityInfo();
 };

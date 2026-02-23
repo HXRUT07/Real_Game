@@ -5,10 +5,11 @@
 const float HEX_SIZE_UNIT = 30.0f;
 
 // รับ name เข้ามาด้วย
-Unit::Unit(std::string name, int startR, int startC) {
-    m_name = name; // เก็บชื่อยูนิต
+Unit::Unit(std::string name, int startR, int startC, int owner) {
+    m_name = name;
     m_gridR = startR;
     m_gridC = startC;
+    m_owner = owner;
 
     // ค่าสถานะเริ่มต้น
     m_maxAP = 2;
@@ -31,16 +32,16 @@ void Unit::moveTo(int r, int c) {
 }
 
 void Unit::draw(sf::RenderWindow& window) {
-    // Logic เปลี่ยนสีตาม AP
-    // ถ้ายังมีแรงเดิน -> สีแดง
     if (m_currentAP > 0) {
-        m_shape.setFillColor(sf::Color::Red);
+        // มีแรงเดิน
+        if (m_owner == 1) m_shape.setFillColor(sf::Color::Red);       // P1 สีแดง
+        else m_shape.setFillColor(sf::Color(50, 100, 255));           // P2 สีน้ำเงิน
     }
-    // ถ้าหมดแรง -> สีฟ้า (Cyan)
     else {
-        m_shape.setFillColor(sf::Color::Cyan);
+        // หมดแรง (AP = 0)
+        if (m_owner == 1) m_shape.setFillColor(sf::Color(150, 0, 0)); // P1 แดงคล้ำ
+        else m_shape.setFillColor(sf::Color(0, 0, 150));              // P2 น้ำเงินคล้ำ
     }
-
     window.draw(m_shape);
 }
 

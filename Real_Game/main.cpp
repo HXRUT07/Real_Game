@@ -10,7 +10,8 @@
 #include "MouseUI.h"     // <--- USER INTERFACE MOUSE (PLAY)
 #include "GameCamera.h"  // <--- GAME CAMERA SYSTEM (Yu)
 #include "Unit.h"        // <--- UNIT SYSTEM
-#include "ResourceManage.h" // <--- [NEW] เพิ่ม Header ของระบบทรัพยากร
+#include "ResourceManage.h" // <--- เพิ่ม Header ของระบบทรัพยากร
+#include "TurnManager.h" // <--- ระบบเทิร์น
 
 int main() {
     // ตั้งค่า Seed สำหรับการสุ่ม (ใส่ใน Main ทีเดียวจบ)
@@ -22,7 +23,7 @@ int main() {
 
     sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Hexa-Conquest", sf::Style::Fullscreen, settings);
 
-    // (แถม) จำกัดเฟรมเรตหน่อย เครื่องจะได้ไม่ทำงานหนักเกินไปตอน Fullscreen
+    // จำกัดเฟรมเรตหน่อย เครื่องจะได้ไม่ทำงานหนักเกินไปตอน Fullscreen
     window.setFramerateLimit(60);
 
     //----Map system----//(Yu)
@@ -39,6 +40,7 @@ int main() {
     Unit* selectedUnit = nullptr;  // ตัวที่กำลังเลือกอยู่
     bool isGameRunning = false;    // ตัวแปรเช็คว่าจบช่วงเลือกจุดเกิดหรือยัง
     int unitNameCounter = 1;       // ตัวนับสำหรับตั้งชื่อ Unit อัตโนมัติ
+    TurnManager turnSys(2); // สร้างระบบเทิร์นสำหรับ 2 ผู้เล่น
 
     while (window.isOpen()) {
 
@@ -65,47 +67,24 @@ int main() {
                 sf::Vector2f uiPos = window.mapPixelToCoords(pixelPos, window.getDefaultView()); // ตำแหน่งสำหรับ UI
 
                 if (event.mouseButton.button == sf::Mouse::Right) {
-                    // คลิกขวา: ยกเลิกการเลือก และ แสดง Resource Panel
+                    // 1. ยกเลิกการเลือกทหารและไฮไลท์
                     gui.clearSelection();
                     selectedUnit = nullptr;
                     worldMap.clearHighlight();
 
-                    // --- ส่วนคำนวณทรัพยากร (Resource Integration) ---
-                    int r_res = 0, c_res = 0;
+                    // 2. ดึงข้อมูลทรัพยากรจากช่องที่คลิก
+                    int r = 0, c = 0;
+                    if (worldMap.getGridCoords(worldPos, r, c)) {
+                        HexTile* clickedTile = worldMap.getTile(r, c);
 
-                    // 1. เช็คว่าคลิกโดน Grid จริงๆ หรือไม่
-                    if (worldMap.getGridCoords(worldPos, r_res, c_res)) {
-
-                        // --- [UPDATED] ระบบ Lock Resource (สุ่มครั้งเดียวจำตลอดไป) ---
-
-                        // 2. ดึง Pointer ของช่องนั้นมา (ตัวจริงจาก Memory)
-                        HexTile* tile = worldMap.getTile(r_res, c_res);
-
-                        if (tile != nullptr) {
-                            // 3. เช็คว่าเคยสุ่มของไปหรือยัง?
-                            if (tile->hasResourcesGenerated) {
-                                // A. เคยสุ่มแล้ว (LOAD OLD DATA): ให้ดึงค่าเดิมที่บันทึกไว้มาใช้เลย
-                                std::cout << "[LOAD] Tile (" << r_res << "," << c_res << ") - Loading stored resources." << std::endl;
-
-                                // ส่งค่าเดิมไปโชว์ที่ UI
-                                gui.showResourcePanel((float)window.getSize().x, tile->storedWood, tile->storedGold, tile->storedFood);
-                            }
-                            else {
-                                // B. ยังไม่เคยสุ่ม (GENERATE NEW): ให้สุ่มใหม่ แล้วบันทึกเก็บไว้ (Save)
-                                std::cout << "[NEW] Tile (" << r_res << "," << c_res << ") - Generating first time." << std::endl;
-
-                                // สุ่มทรัพยากรตามประเภทพื้นที่
-                                ResourceYield loot = ResourceManage::generateResources(tile->type);
-
-                                // บันทึกค่าลง Tile ทันที
-                                tile->storedWood = loot.wood;
-                                tile->storedGold = loot.gold;
-                                tile->storedFood = loot.food;
-                                tile->hasResourcesGenerated = true; // <--- ติ๊กถูกว่าช่องนี้มีของแล้ว ห้ามสุ่มใหม่
-
-                                // ส่งค่าใหม่ไปโชว์ที่ UI
-                                gui.showResourcePanel((float)window.getSize().x, loot.wood, loot.gold, loot.food);
-                            }
+                        // กฎ: ต้องมีช่องนี้อยู่จริง และ "ต้องเคยสำรวจแล้ว (isExplored)" เท่านั้น
+                        if (clickedTile != nullptr && clickedTile->isExplored) {
+                            // โชว์ข้อมูลทรัพยากรของช่องนั้น
+                            gui.showResourcePanel((float)window.getSize().x, clickedTile->gold, clickedTile->wood, clickedTile->food);
+                        }
+                        else {
+                            // ถ้าคลิกขวาใส่หมอกดำๆ ให้ปิดหน้าต่างทิ้ง
+                            gui.hideInfo();
                         }
                     }
                 }
@@ -126,7 +105,9 @@ int main() {
                             int spawnR = 0, spawnC = 0;
                             // ต้องใช้ฟังก์ชัน getGridCoords ที่เพิ่มใน GameMap.h
                             if (worldMap.getGridCoords(worldPos, spawnR, spawnC)) {
-                                units.emplace_back("Commander", spawnR, spawnC); // ตั้งชื่อ Commander
+                                // [อัปเดต] ใส่เลข 1 ด้านหลังเพื่อให้ตัวนี้เป็นของ Player 1 และสร้างศัตรู Player 2
+                                units.emplace_back("Commander", spawnR, spawnC, 1);
+                                units.emplace_back("Enemy", spawnR + 2, spawnC + 2, 2);
                                 std::cout << "Commander Spawned at " << spawnR << "," << spawnC << std::endl;
                             }
                         }
@@ -150,10 +131,11 @@ int main() {
                                 // ส่งรายการ Unit ไปให้ UI แสดงผลทางขวา
                                 gui.setSelectionList(stackInTile);
 
-                                // Auto-select: เลือกตัวแรกที่มี AP เหลือ
+                                // ตอนจะ Auto-select หาตัวที่มี AP ให้เพิ่มเงื่อนไขตรวจเช็คเจ้าของด้วย
                                 selectedUnit = nullptr;
                                 for (auto* u : stackInTile) {
-                                    if (u->hasAP()) {
+                                    // กฎ: ต้องมี AP และ "ต้องเป็นของ Player ปัจจุบันเท่านั้น!"
+                                    if (u->hasAP() && u->getOwner() == turnSys.getCurrentPlayer()) {
                                         selectedUnit = u;
                                         break;
                                     }
@@ -166,7 +148,7 @@ int main() {
                                 }
                                 else {
                                     worldMap.clearHighlight(); // ไม่มีตัวไหนมี AP
-                                    std::cout << "All units in this stack have no AP." << std::endl;
+                                    std::cout << "All units in this stack have no AP or not your turn." << std::endl;
                                 }
                             }
                             // กรณี B: คลิกพื้นที่ว่าง และมี Unit ถูกเลือกอยู่ (สั่งเดิน)
@@ -210,18 +192,24 @@ int main() {
 
             // [DEBUG / TEST] Key Controls
             if (event.type == sf::Event::KeyPressed) {
-                // Spacebar: สุ่มเสก Unit เพิ่ม (เฉพาะตอนเริ่มเกมแล้ว)
-                if (event.key.code == sf::Keyboard::Space && isGameRunning) {
-                    int r = std::rand() % 50;
-                    int c = std::rand() % 50;
-                    std::string name = "Unit " + std::to_string(unitNameCounter++);
-                    units.emplace_back(name, r, c);
-                    std::cout << "Spawned new unit: " << name << " at " << r << "," << c << std::endl;
-                }
                 // R: รีเซ็ต AP ของทุก Unit (จำลองการจบ Turn)
                 if (event.key.code == sf::Keyboard::R) {
                     for (auto& u : units) u.resetAP();
                     std::cout << "Next Turn: All AP Reset" << std::endl;
+                }
+            }
+
+            // [แก้บัค] ใช้ KeyReleased (ปล่อยนิ้ว) และแก้จาก Enter เป็น Return
+            if (event.type == sf::Event::KeyReleased) {
+                if (event.key.code == sf::Keyboard::Return && isGameRunning) {
+                    turnSys.endTurn(units); // เรียกสลับเทิร์นและรีเซ็ต AP
+
+                    // เคลียร์ UI ที่เลือกค้างไว้
+                    gui.clearSelection();
+                    selectedUnit = nullptr;
+                    worldMap.clearHighlight();
+
+                    std::cout << ">>> Switched to Player " << turnSys.getCurrentPlayer() << " <<<" << std::endl;
                 }
             }
         }
@@ -239,7 +227,7 @@ int main() {
         // เราจะส่ง mousePos ไปให้ worldMap ตรวจสอบว่าชี้ที่ช่องไหน
         worldMap.updateHighlight(mousePos);
 
-        // อัปเดต UI (ไม่ได้ทำอะไรมากในตอนนี้ แต่ใส่ไว้ตามโครงสร้างเดิม)
+        // อัปเดต UI
         // gui.update(mousePosScreen); 
 
         window.clear(sf::Color(20, 20, 30)); // พื้นหลังสีน้ำเงินเข้มๆ เหมือนอวกาศ
