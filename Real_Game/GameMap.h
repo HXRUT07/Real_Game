@@ -41,8 +41,10 @@ public:
 
     // Main interaction
     void draw(sf::RenderWindow& window);
+    void drawCities(sf::RenderWindow& window);
     void updateHighlight(sf::Vector2f mousePos);
     void handleMouseClick(sf::Vector2f mousePos);
+    City*getSelectedCity() { return selectedCity; }
 
     // Getters / Checkers
     bool isGameStarted() const { return m_gameStarted; }
@@ -59,13 +61,14 @@ public:
     // --- [NEW] ฟังก์ชันขอ Pointer ของ Tile เพื่อไปแก้ค่าข้างใน (เพิ่มตรงนี้) ---
     HexTile* getTile(int r, int c);
 
+
 private:
     std::vector<City> cities;
+    City* selectedCity = nullptr;
     std::vector<HexTile> tiles;
     int rows;
     int cols;
     bool m_gameStarted = false;
-
     // Internal Helpers
     sf::ConvexShape createHexShape(float x, float y, TerrainType type);
     void createCluster(TerrainType type, int startR, int startC, int clusterSize);

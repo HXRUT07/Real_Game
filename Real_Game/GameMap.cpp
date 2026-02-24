@@ -5,7 +5,7 @@
 #include <cmath>
 #include <iostream>
 #include "ResourceManage.h"
-#include <queue> // <--- [สำคัญมาก] ต้องมีบรรทัดนี้ ไม่งั้น Error std::queue
+#include <queue> 
 
 const float PI = 3.14159265f;
 
@@ -99,11 +99,18 @@ bool GameMap::getGridCoords(sf::Vector2f mousePos, int& outR, int& outC) {
     return false;
 }
 
-void GameMap::handleMouseClick(sf::Vector2f mousePos) {
-    if (!m_gameStarted) {
-        int r, c;
-        if (getGridCoords(mousePos, r, c)) {
-            startGame(r, c);
+void GameMap::handleMouseClick(sf::Vector2f mousePos)
+{
+    // คลิกขวา
+    if (sf::Mouse::isButtonPressed(sf::Mouse::Right)) {
+        selectedCity = nullptr;
+
+        for (auto& city : cities) {
+            sf::FloatRect bounds = city.getBounds(); 
+            if (bounds.contains(mousePos)) {
+                selectedCity = &city;
+                break;
+            }
         }
     }
 }
@@ -371,20 +378,21 @@ void GameMap::updateHighlight(sf::Vector2f mousePos) {
     }
 }
 
-void GameMap::draw(sf::RenderWindow& window) {
-    // วาดพื้นหลังกระเบื้อง
-    for (const auto& tile : tiles) {
+void GameMap::draw(sf::RenderWindow& window)
+{
+    for (const auto& tile : tiles)
         window.draw(tile.shape);
-    }
+}
 
-    //  วาดเมือง เฉพาะเมืองที่ถูกเปิดหมอก (isExplored) แล้วเท่านั้น!
+void GameMap::drawCities(sf::RenderWindow& window)
+{
     for (auto& city : cities) {
-        // เปลี่ยนจาก city.gridR เป็น city.getR()
         HexTile* tile = getTile(city.getR(), city.getC());
-        if (tile != nullptr && tile->isExplored) {
+        if (tile && tile->isExplored) {
             city.draw(window);
         }
     }
+}
     // วาดช่องทางเดิน (Highlight สีเขียว)
     for (const auto& tile : tiles) {
         if (tile.isPath) {
