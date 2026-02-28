@@ -298,6 +298,6 @@ int main() {
 
         window.display();
     } // <---  วงเล็บปิดของ while(window.isOpen())
-
+  
     return 0; // <---  ย้าย return 0 มาไว้จุดล่างสุดนอกลูป
 }
