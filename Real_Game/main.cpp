@@ -12,6 +12,7 @@
 #include "Unit.h"        // <--- UNIT SYSTEM
 #include "ResourceManage.h" // <--- เพิ่ม Header ของระบบทรัพยากร
 #include "TurnManager.h" // <--- ระบบเทิร์น
+#include "MainMenu.h" //<--- ระบบเมนูหลัก
 
 int main() {
     // ตั้งค่า Seed สำหรับการสุ่ม (ใส่ใน Main ทีเดียวจบ)
@@ -25,6 +26,34 @@ int main() {
 
     // จำกัดเฟรมเรตหน่อย เครื่องจะได้ไม่ทำงานหนักเกินไปตอน Fullscreen
     window.setFramerateLimit(60);
+
+    // ----Main Menu----//(PLAY)
+    {
+        MainMenu menu(window,
+            "assets/background.png",
+            "assets/fonts/Trajan Pro Regular.ttf");
+        sf::Clock menuClock;
+
+        while (window.isOpen()) {
+            float dt = menuClock.restart().asSeconds();
+
+            sf::Event event;
+            while (window.pollEvent(event)) {
+                if (event.type == sf::Event::Closed)
+                    window.close();
+                menu.handleEvent(event);
+            }
+
+            menu.update(dt);
+
+            if (menu.getState() == MenuState::Play)  break;  // ออกจาก menu loop → เข้าเกม
+            if (menu.getState() == MenuState::Exit) { window.close(); break; }
+
+            window.clear();
+            menu.draw();
+            window.display();
+        }
+    }
 
     //----Map system----//(Yu)
     // 1. สร้าง Map แค่บรรทัดเดียว!
