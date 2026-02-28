@@ -66,4 +66,12 @@
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>
+  <ItemGroup>
+    <Image Include="C:\Users\USER\Downloads\U blue horse.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="Blue Castle.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+  </ItemGroup>
 </Project>
