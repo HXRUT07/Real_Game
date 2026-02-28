@@ -18,6 +18,11 @@ private:
     bool m_showSidePanel = false;        // สถานะโชว์แถบขวา
     std::vector<Unit*> m_selectedUnits;  // รายการยูนิตที่จะโชว์
 
+    // ---  ตัวแปรสำหรับปุ่มจบเทิร์น & เลขเทิร์น ---
+    sf::RectangleShape endTurnBtn;
+    sf::Text endTurnText;
+    sf::Text turnCounterText;
+
 public:
     MouseUI(); // Constructor
 
@@ -25,7 +30,7 @@ public:
     void showResourcePanel(float windowWidth, int wood, int gold, int food);
     void hideInfo();
 
-    // --- ฟังก์ชันโชว์คลังหลวงของเมือง ---
+    // ---  ฟังก์ชันโชว์คลังหลวงของเมือง ---
     void showCityResourcePanel(float windowWidth, int gold, int wood, int food);
 
     // ฟังก์ชันจัดการแถบขวา
@@ -34,4 +39,8 @@ public:
 
     void update(sf::Vector2f mousePos);
     void draw(sf::RenderWindow& window);
+
+    // ---  ฟังก์ชันอัปเดตเลขเทิร์นและเช็คปุ่ม ---
+    void updateTurnInfo(int playerTurn, int turnNumber);
+    bool isEndTurnButtonClicked(sf::Vector2f mousePos);
 };

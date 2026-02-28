@@ -46,6 +46,9 @@ int main() {
     int unitNameCounter = 1;       // ตัวนับสำหรับตั้งชื่อ Unit อัตโนมัติ
     TurnManager turnSys(2); // สร้างระบบเทิร์นสำหรับ 2 ผู้เล่น
 
+    // --- ตัวแปรเก็บจำนวนเทิร์นที่ผ่านไป ---
+    int currentTurnNumber = 1;
+
     while (window.isOpen()) {
 
         sf::Vector2f mousePosScreen = window.mapPixelToCoords(sf::Mouse::getPosition(window));
@@ -105,6 +108,17 @@ int main() {
                     }
                 }
                 else if (event.mouseButton.button == sf::Mouse::Left) {
+
+                    // ---  เช็คก่อนเลยว่าคลิกโดนปุ่ม "END TURN" หรือเปล่า? ---
+                    if (gui.isEndTurnButtonClicked(uiPos) && isGameRunning) {
+                        turnSys.endTurn(units);
+                        gui.clearSelection();
+                        selectedUnit = nullptr;
+                        worldMap.clearHighlight();
+                        std::cout << ">>> Switched to AI (Player 2) <<<" << std::endl;
+                        continue; // ข้ามการทำงานด้านล่างไปเลย เพราะคลิกปุ่มไปแล้ว
+                    }
+
                     // คลิกซ้าย: ซ่อน Info Panel เดิมก่อน
                     gui.hideInfo();
 
@@ -261,6 +275,10 @@ int main() {
 
             // AI จบเทิร์น โยนกลับให้ผู้เล่น 1 ทันที
             turnSys.endTurn(units);
+
+            // ---  วนกลับมาตาเราปุ๊บ ก็นับเป็นเทิร์นใหม่ทันที ---
+            currentTurnNumber++;
+
             std::cout << ">>> Switched to Player 1 <<<" << std::endl;
         }
 
@@ -303,6 +321,9 @@ int main() {
             }
         }
         worldMap.drawCities(window);
+
+        // --- ส่งข้อมูลให้ UI อัปเดตเลขเทิร์นก่อนวาด ---
+        gui.updateTurnInfo(turnSys.getCurrentPlayer(), currentTurnNumber);
 
         window.setView(window.getDefaultView()); // คืนค่า View ปกติเพื่อวาด UI ทับข้างบนสุด
         gui.draw(window);
@@ -364,3 +385,5 @@ int main() {
     }
 #endif
 }
+
+// ไม่ต้องเอาคอมเมนต์ออก
