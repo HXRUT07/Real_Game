@@ -3,17 +3,10 @@
 #include <vector>
 #include <cmath>
 #include "City.h"
+#include "ResourceManage.h" 
 
 // ขนาดของ Hexagon
 const float HEX_SIZE = 30.0f;
-
-// ประเภทของพื้นที่
-enum class TerrainType {
-    Grass,
-    Water,
-    Mountain,
-    Forest
-};
 
 // โครงสร้างข้อมูลของแต่ละช่อง
 struct HexTile {

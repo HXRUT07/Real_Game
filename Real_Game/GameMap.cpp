@@ -106,7 +106,7 @@ void GameMap::handleMouseClick(sf::Vector2f mousePos)
         selectedCity = nullptr;
 
         for (auto& city : cities) {
-            sf::FloatRect bounds = city.getBounds(); 
+            sf::FloatRect bounds = city.getBounds();
             if (bounds.contains(mousePos)) {
                 selectedCity = &city;
                 break;
@@ -331,6 +331,7 @@ void GameMap::updateColors() {
             case TerrainType::Water: c = sf::Color(25, 50, 100); break;
             case TerrainType::Mountain: c = sf::Color(60, 60, 60); break;
             case TerrainType::Forest: c = sf::Color(17, 70, 17); break;
+            case TerrainType::City: c = sf::Color(150, 120, 0); break; // <--- ดักบัคเผื่อไว้
             }
             tile.shape.setFillColor(c);
             tile.shape.setOutlineColor(sf::Color(30, 30, 30));
@@ -343,6 +344,7 @@ void GameMap::updateColors() {
             case TerrainType::Water: c = sf::Color(50, 100, 200); break;
             case TerrainType::Mountain: c = sf::Color(120, 120, 120); break;
             case TerrainType::Forest: c = sf::Color(34, 139, 34); break;
+            case TerrainType::City: c = sf::Color(255, 215, 0); break; // <--- ดักบัคเผื่อไว้
             }
             tile.shape.setFillColor(c);
             tile.shape.setOutlineColor(sf::Color(30, 30, 30));
@@ -380,19 +382,13 @@ void GameMap::updateHighlight(sf::Vector2f mousePos) {
 
 void GameMap::draw(sf::RenderWindow& window)
 {
-    for (const auto& tile : tiles)
+    for (const auto& tile : tiles) {
         window.draw(tile.shape);
-}
-
-void GameMap::drawCities(sf::RenderWindow& window)
-{
-    for (auto& city : cities) {
-        HexTile* tile = getTile(city.getR(), city.getC());
-        if (tile && tile->isExplored) {
-            city.draw(window);
-        }
     }
-}
+
+    // เรียกใช้วาดเมือง (รวมไว้ในนี้เลยจะได้เรียกง่ายๆ)
+    drawCities(window);
+
     // วาดช่องทางเดิน (Highlight สีเขียว)
     for (const auto& tile : tiles) {
         if (tile.isPath) {
@@ -413,6 +409,16 @@ void GameMap::drawCities(sf::RenderWindow& window)
             h.setOutlineThickness(3.0f);
             window.draw(h);
             // ไม่ break เพราะบางทีเมาส์อาจจะคาบเกี่ยวเส้นขอบ
+        }
+    }
+}
+
+void GameMap::drawCities(sf::RenderWindow& window)
+{
+    for (auto& city : cities) {
+        HexTile* tile = getTile(city.getR(), city.getC());
+        if (tile && tile->isExplored) {
+            city.draw(window);
         }
     }
 }

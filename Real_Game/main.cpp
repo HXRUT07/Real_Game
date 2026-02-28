@@ -304,8 +304,6 @@ int main() {
 
     //panel
 
-    sf::RenderWindow window(sf::VideoMode(1200, 700), "City Panel");
-
     GameMap gameMap(10, 10);
 
     sf::Font font;
