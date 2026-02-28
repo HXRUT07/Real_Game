@@ -21,7 +21,7 @@ struct HexTile {
     bool isVisible = false;   // มองเห็นอยู่ไหม (ในระยะสายตา)
     bool isPath = false;
 
-    // --- เพิ่มใหม่ ---
+    
     int gold = 0;
     int wood = 0;
     int food = 0;
@@ -37,7 +37,7 @@ public:
     void drawCities(sf::RenderWindow& window);
     void updateHighlight(sf::Vector2f mousePos);
     void handleMouseClick(sf::Vector2f mousePos);
-    City*getSelectedCity() { return selectedCity; }
+    City* getSelectedCity() { return selectedCity; }
 
     // Getters / Checkers
     bool isGameStarted() const { return m_gameStarted; }
@@ -51,9 +51,11 @@ public:
     // [สำคัญ] ต้องอยู่ตรง Public นะครับ ห้ามเอาไปซ่อนใน Private
     void revealFog(int centerR, int centerC, int sightRange);
 
-    // --- [NEW] ฟังก์ชันขอ Pointer ของ Tile เพื่อไปแก้ค่าข้างใน (เพิ่มตรงนี้) ---
+    // ---  ฟังก์ชันขอ Pointer ของ Tile เพื่อไปแก้ค่าข้างใน (เพิ่มตรงนี้) ---
     HexTile* getTile(int r, int c);
 
+    // ---  ฟังก์ชันเช็คว่าช่องนี้มีเมืองตั้งอยู่ไหม (สำหรับคลิกขวาดูคลังหลวง) ---
+    City* getCityAt(int r, int c);
 
 private:
     std::vector<City> cities;

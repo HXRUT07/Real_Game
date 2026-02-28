@@ -25,6 +25,9 @@ public:
     void showResourcePanel(float windowWidth, int wood, int gold, int food);
     void hideInfo();
 
+    // --- ฟังก์ชันโชว์คลังหลวงของเมือง ---
+    void showCityResourcePanel(float windowWidth, int gold, int wood, int food);
+
     // ฟังก์ชันจัดการแถบขวา
     void setSelectionList(const std::vector<Unit*>& units); // รับยูนิตมาโชว์
     void clearSelection();                                  // ปิดแถบ

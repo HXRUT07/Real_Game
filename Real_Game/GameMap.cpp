@@ -99,22 +99,15 @@ bool GameMap::getGridCoords(sf::Vector2f mousePos, int& outR, int& outC) {
     return false;
 }
 
-void GameMap::handleMouseClick(sf::Vector2f mousePos)
-{
-    // คลิกขวา
-    if (sf::Mouse::isButtonPressed(sf::Mouse::Right)) {
-        selectedCity = nullptr;
-
-        for (auto& city : cities) {
-            sf::FloatRect bounds = city.getBounds();
-            if (bounds.contains(mousePos)) {
-                selectedCity = &city;
-                break;
-            }
+// เอาโค้ดสร้างเมืองกลับมา 
+void GameMap::handleMouseClick(sf::Vector2f mousePos) {
+    if (!m_gameStarted) {
+        int r, c;
+        if (getGridCoords(mousePos, r, c)) {
+            startGame(r, c); // <--- คำสั่งนี้คือตัวสร้างเมืองเลยครับ ขาดไม่ได้!
         }
     }
 }
-
 // --------------------------------------------------------
 // Game Logic (Start / Gen World)
 // --------------------------------------------------------
@@ -439,4 +432,14 @@ sf::ConvexShape GameMap::createHexShape(float x, float y, TerrainType type) {
     hex.setPosition(x, y);
     hex.setOutlineThickness(-1.f);
     return hex;
+}
+
+// --- ฟังก์ชันเช็คว่าช่องนี้มีเมืองอยู่หรือเปล่า ---
+City* GameMap::getCityAt(int r, int c) {
+    for (auto& city : cities) {
+        if (city.getR() == r && city.getC() == c) {
+            return &city;
+        }
+    }
+    return nullptr;
 }

@@ -81,16 +81,26 @@ int main() {
                     // 2. ดึงข้อมูลทรัพยากรจากช่องที่คลิก
                     int r = 0, c = 0;
                     if (worldMap.getGridCoords(worldPos, r, c)) {
-                        HexTile* clickedTile = worldMap.getTile(r, c);
 
-                        // กฎ: ต้องมีช่องนี้อยู่จริง และ "ต้องเคยสำรวจแล้ว (isExplored)" เท่านั้น
-                        if (clickedTile != nullptr && clickedTile->isExplored) {
-                            // โชว์ข้อมูลทรัพยากรของช่องนั้น
-                            gui.showResourcePanel((float)window.getSize().x, clickedTile->gold, clickedTile->wood, clickedTile->food);
+                        // --- [อัปเดตระบบใหม่] เช็คก่อนว่ามีเมืองอยู่ตรงนี้ไหม ---
+                        City* clickedCity = worldMap.getCityAt(r, c);
+                        if (clickedCity != nullptr) {
+                            // ถ้ามีเมือง ให้โชว์หน้าต่างคลังหลวงของเมือง (CITY STOCKPILE)
+                            gui.showCityResourcePanel((float)window.getSize().x, clickedCity->getGold(), clickedCity->getWood(), clickedCity->getFood());
                         }
                         else {
-                            // ถ้าคลิกขวาใส่หมอกดำๆ ให้ปิดหน้าต่างทิ้ง
-                            gui.hideInfo();
+                            // ถ้าไม่มีเมือง ค่อยไปดึงข้อมูลทรัพยากรบนพื้นดินปกติ
+                            HexTile* clickedTile = worldMap.getTile(r, c);
+
+                            // กฎ: ต้องมีช่องนี้อยู่จริง และ "ต้องเคยสำรวจแล้ว (isExplored)" เท่านั้น
+                            if (clickedTile != nullptr && clickedTile->isExplored) {
+                                // โชว์ข้อมูลทรัพยากรของช่องนั้น
+                                gui.showResourcePanel((float)window.getSize().x, clickedTile->gold, clickedTile->wood, clickedTile->food);
+                            }
+                            else {
+                                // ถ้าคลิกขวาใส่หมอกดำๆ ให้ปิดหน้าต่างทิ้ง
+                                gui.hideInfo();
+                            }
                         }
                     }
                 }
@@ -117,7 +127,7 @@ int main() {
                                 // ดันให้ศัตรูไปเกิดไกลๆ เลย (บวก 8 ช่อง) เพื่อให้ชัวร์ว่าอยู่ในหมอกแน่นอน
                                 units.emplace_back("Enemy", spawnR + 8, spawnC + 8, 2);
 
-                                std::cout << "Commander Spawned at " << spawnR << "," << spawnC << std::endl;
+                                std::cout << "City Founded and Commander Spawned at " << spawnR << "," << spawnC << std::endl;
                             }
                         }
                     }
@@ -299,9 +309,14 @@ int main() {
 
         window.display();
     } // <---  วงเล็บปิดของ while(window.isOpen())
-  
+
     return 0; // <---  ย้าย return 0 มาไว้จุดล่างสุดนอกลูป
 
+    // =========================================================================
+    // โค้ดด้านล่างนี้ถูกเก็บรักษาไว้ 100% ตามคำขอครับ 
+    // (ใส่ #if 0 ครอบไว้เพื่อไม่ให้คอมพิวเตอร์งงตอนรันโปรแกรมครับ)
+    // =========================================================================
+#if 0
     //panel
 
     GameMap gameMap(10, 10);
@@ -347,4 +362,5 @@ int main() {
 
         window.display();
     }
+#endif
 }

@@ -11,11 +11,14 @@ private:
     sf::RectangleShape baseIcon;
 
     std::string name;
-    ResourceYield baseResource;
     bool upgraded = false;
 
+    // ---  คลังหลวงเก็บทรัพยากรของเมือง ---
+    ResourceYield stockpile;
+
 public:
-    City(int r, int c, sf::Vector2f pos, ResourceYield res);
+    // ลบ ResourceYield ในวงเล็บออก เพราะเราใช้คลังหลวงแทนแล้ว
+    City(int r, int c, sf::Vector2f pos);
 
     int getR() const { return gridR; }
     int getC() const { return gridC; }
@@ -23,7 +26,14 @@ public:
     void setName(const std::string& newName) { name = newName; }
     std::string getName() const { return name; }
 
-    ResourceYield getTotalResource() const;
+    // ---ฟังก์ชันจัดการคลังหลวง ---
+    int getGold() const { return stockpile.gold; }
+    int getWood() const { return stockpile.wood; }
+    int getFood() const { return stockpile.food; }
+
+    void addGold(int amount) { stockpile.gold += amount; }
+    void addWood(int amount) { stockpile.wood += amount; }
+    void addFood(int amount) { stockpile.food += amount; }
 
     void draw(sf::RenderWindow& window);
 

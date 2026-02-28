@@ -76,6 +76,29 @@ void MouseUI::update(sf::Vector2f mousePos) {
 }
 
 // ---------------------------------------------------------
+// โชว์หน้าต่างคลังหลวงของเมือง (เวลาคลิกขวาที่เมือง)
+// ---------------------------------------------------------
+void MouseUI::showCityResourcePanel(float windowWidth, int gold, int wood, int food) {
+    isPanelVisible = true;
+    m_showSidePanel = false; // ปิดแถบทหารเผื่อเปิดค้างไว้
+
+    float padding = 20.f;
+    float posX = windowWidth - infoPanel.getSize().x - padding;
+    float posY = padding;
+
+    infoPanel.setPosition(posX, posY);
+    infoContent.setPosition(posX + 14.f, posY + 12.f);
+
+    infoContent.setString(
+        "--- CITY STOCKPILE ---\n"
+        "\n"
+        "Gold : " + std::to_string(gold) + "\n" +
+        "Wood : " + std::to_string(wood) + "\n" +
+        "Food : " + std::to_string(food)
+    );
+}
+
+// ---------------------------------------------------------
 // Draw Function (วาดทั้งสองอย่าง)
 // ---------------------------------------------------------
 void MouseUI::draw(sf::RenderWindow& window) {
