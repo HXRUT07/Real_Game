@@ -292,6 +292,7 @@ int main() {
                 }
             }
         }
+        worldMap.drawCities(window);
 
         window.setView(window.getDefaultView()); // คืนค่า View ปกติเพื่อวาด UI ทับข้างบนสุด
         gui.draw(window);
@@ -300,4 +301,52 @@ int main() {
     } // <---  วงเล็บปิดของ while(window.isOpen())
   
     return 0; // <---  ย้าย return 0 มาไว้จุดล่างสุดนอกลูป
+
+    //panel
+
+    sf::RenderWindow window(sf::VideoMode(1200, 700), "City Panel");
+
+    GameMap gameMap(10, 10);
+
+    sf::Font font;
+    font.loadFromFile("arial.ttf");
+
+    sf::RectangleShape panel;
+    panel.setSize(sf::Vector2f(300, 600));
+    panel.setFillColor(sf::Color(40, 40, 40));
+    panel.setPosition(850, 50);
+
+    sf::Text panelText;
+    panelText.setFont(font);
+    panelText.setCharacterSize(18);
+    panelText.setFillColor(sf::Color::White);
+    panelText.setPosition(870, 70);
+
+    while (window.isOpen())
+    {
+        sf::Event event;
+        while (window.pollEvent(event))
+        {
+            if (event.type == sf::Event::Closed)
+                window.close();
+
+            if (event.type == sf::Event::MouseButtonPressed) {
+                sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+                gameMap.handleMouseClick(mousePos);
+            }
+        }
+
+        window.clear();
+
+        gameMap.draw(window);
+
+        City* city = gameMap.getSelectedCity();
+        if (city != nullptr) {
+            window.draw(panel);
+            panelText.setString(city->getCityInfo());
+            window.draw(panelText);
+        }
+
+        window.display();
+    }
 }
