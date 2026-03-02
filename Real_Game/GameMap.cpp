@@ -126,7 +126,9 @@ void GameMap::startGame(int spawnR, int spawnC) {
     );
 
     // สร้าง City (สี่เหลี่ยมฐาน)
-    cities.emplace_back(spawnR, spawnC, center);
+// เปรมทำ - ใช้ make_unique แทน emplace_back เพราะ RenderTexture copy ไม่ได้
+    cities.push_back(std::make_unique<City>(spawnR, spawnC, center));
+    // เปรมทำ - จบ
 
     generateWorldResources();
     spawnStarterResources(spawnR, spawnC);
@@ -408,18 +410,19 @@ void GameMap::draw(sf::RenderWindow& window)
 
 void GameMap::drawCities(sf::RenderWindow& window)
 {
+    // เปรมทำ - เปลี่ยน . เป็น -> เพราะใช้ unique_ptr
     for (auto& city : cities) {
-        HexTile* tile = getTile(city.getR(), city.getC());
+        HexTile* tile = getTile(city->getR(), city->getC());
         if (tile && tile->isExplored) {
-            city.draw(window);
+            city->draw(window);
         }
     }
+    // เปรมทำ - จบ
 }
 
 sf::ConvexShape GameMap::createHexShape(float x, float y, TerrainType type) {
     sf::ConvexShape hex;
     hex.setPointCount(6);
-
     for (int i = 0; i < 6; ++i) {
         float angle = 60.f * i - 30.f;
         float rad = angle * PI / 180.f;
@@ -428,7 +431,6 @@ sf::ConvexShape GameMap::createHexShape(float x, float y, TerrainType type) {
             HEX_SIZE * std::sin(rad)
         ));
     }
-
     hex.setPosition(x, y);
     hex.setOutlineThickness(-1.f);
     return hex;
@@ -436,10 +438,12 @@ sf::ConvexShape GameMap::createHexShape(float x, float y, TerrainType type) {
 
 // --- ฟังก์ชันเช็คว่าช่องนี้มีเมืองอยู่หรือเปล่า ---
 City* GameMap::getCityAt(int r, int c) {
+    // เปรมทำ - เปลี่ยน . เป็น -> และใช้ .get() เพราะใช้ unique_ptr
     for (auto& city : cities) {
-        if (city.getR() == r && city.getC() == c) {
-            return &city;
+        if (city->getR() == r && city->getC() == c) {
+            return city.get();
         }
     }
     return nullptr;
+    // เปรมทำ - จบ
 }

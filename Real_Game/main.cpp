@@ -46,7 +46,7 @@ int main() {
 
             menu.update(dt);
 
-            if (menu.getState() == MenuState::Play)  break;  // ออกจาก menu loop → เข้าเกม
+            if (menu.getState() == MenuState::Play)  break;
             if (menu.getState() == MenuState::Exit) { window.close(); break; }
 
             window.clear();
@@ -156,18 +156,17 @@ int main() {
                         // 3. ส่งให้ GameMap จัดการเลือกจุดเกิด
                         worldMap.handleMouseClick(worldPos);
 
-                        // เช็คว่า Map เริ่มเกมสำเร็จหรือยัง? (ถ้าเลือกจุดเกิดแล้ว Map จะตั้ง flag ว่าเริ่มเกม)
+                        // เช็คว่า Map เริ่มเกมสำเร็จหรือยัง?
                         if (worldMap.isGameStarted()) {
                             isGameRunning = true;
 
                             // *** Spawn ทหารตัวแรกตรงจุดที่คลิก ***
                             int spawnR = 0, spawnC = 0;
-                            // ต้องใช้ฟังก์ชัน getGridCoords ที่เพิ่มใน GameMap.h
                             if (worldMap.getGridCoords(worldPos, spawnR, spawnC)) {
                                 //  ใส่เลข 1 ด้านหลังเพื่อให้ตัวนี้เป็นของ Player 1 และสร้างศัตรู Player 2
                                 units.emplace_back("Commander", spawnR, spawnC, 1);
 
-                                // ดันให้ศัตรูไปเกิดไกลๆ เลย (บวก 8 ช่อง) เพื่อให้ชัวร์ว่าอยู่ในหมอกแน่นอน
+                                // ดันให้ศัตรูไปเกิดไกลๆ เลย (บวก 8 ช่อง)
                                 units.emplace_back("Enemy", spawnR + 8, spawnC + 8, 2);
 
                                 std::cout << "City Founded and Commander Spawned at " << spawnR << "," << spawnC << std::endl;
@@ -177,12 +176,10 @@ int main() {
                     // --- PHASE 2: ควบคุมทหาร (Gameplay) ---
                     else {
                         int r = 0, c = 0;
-                        // ตรวจสอบว่าคลิกโดนช่องไหนใน Grid
                         if (worldMap.getGridCoords(worldPos, r, c)) {
 
                             HexTile* clickedTile = worldMap.getTile(r, c);
 
-                            //  ถ้ายิงคลิกไปโดนหมอกดำ (มองไม่เห็น) ให้ตัดจบการทำงาน ถือว่าคลิกพื้นที่ว่างเปล่า!
                             if (clickedTile == nullptr || !clickedTile->isVisible) {
                                 gui.clearSelection();
                                 selectedUnit = nullptr;
@@ -199,10 +196,8 @@ int main() {
 
                                 // กรณี A: คลิกโดนช่องที่มี Unit (เลือก Unit)
                                 if (!stackInTile.empty()) {
-                                    // ส่งรายการ Unit ไปให้ UI แสดงผลทางขวา
                                     gui.setSelectionList(stackInTile);
 
-                                    // ตอนจะ Auto-select หาตัวที่มี AP ให้เพิ่มเงื่อนไขตรวจเช็คเจ้าของด้วย
                                     selectedUnit = nullptr;
                                     for (auto* u : stackInTile) {
                                         // กฎ: ต้องมี AP และ "ต้องเป็นของ Player ปัจจุบันเท่านั้น!"
@@ -212,19 +207,17 @@ int main() {
                                         }
                                     }
 
-                                    // ถ้าเลือกได้ ให้คำนวณและแสดงช่องเดิน
                                     if (selectedUnit) {
                                         worldMap.calculateValidMoves(selectedUnit->getR(), selectedUnit->getC(), selectedUnit->getMoveRange());
                                         std::cout << "Unit Selected: " << selectedUnit->getName() << std::endl;
                                     }
                                     else {
-                                        worldMap.clearHighlight(); // ไม่มีตัวไหนมี AP
+                                        worldMap.clearHighlight();
                                         std::cout << "All units in this stack have no AP or not your turn." << std::endl;
                                     }
                                 }
                                 // กรณี B: คลิกพื้นที่ว่าง และมี Unit ถูกเลือกอยู่ (สั่งเดิน)
                                 else if (selectedUnit != nullptr) {
-                                    // ตรวจสอบว่าช่องเป้าหมายเดินไปได้หรือไม่ (สีเขียว)
                                     if (worldMap.isValidMove(r, c)) {
                                         // 1. ย้ายตำแหน่ง
                                         selectedUnit->moveTo(r, c);
@@ -233,16 +226,12 @@ int main() {
                                         // 3. เปิดหมอก (ระยะ 1 ช่อง)
                                         worldMap.revealFog(r, c, 1);
 
-                                        // จบการเดิน: เคลียร์ไฮไลท์ และ ยกเลิกการเลือก
                                         worldMap.clearHighlight();
                                         gui.clearSelection(); // ปิดแถบขวา
                                         selectedUnit = nullptr;
                                         std::cout << "Unit Moved!" << std::endl;
                                     }
                                     else {
-                                        // เดินไม่ได้ (อาจจะติดสิ่งกีดขวาง หรือ อยู่นอกระยะ)
-                                        // ให้ยกเลิกการเลือกไปเลย หรือ จะแค่แจ้งเตือนก็ได้
-                                        // ในที่นี้เลือกที่จะยกเลิกการเลือกเพื่อความลื่นไหล
                                         gui.clearSelection();
                                         selectedUnit = nullptr;
                                         worldMap.clearHighlight();
@@ -353,6 +342,11 @@ int main() {
 
         // --- ส่งข้อมูลให้ UI อัปเดตเลขเทิร์นก่อนวาด ---
         gui.updateTurnInfo(turnSys.getCurrentPlayer(), currentTurnNumber);
+
+        // เปรมทำ - ส่งข้อมูลทรัพยากรของเมืองไปแสดงมุมขวาบน
+        City* myCity = worldMap.getFirstCity();
+        if (myCity) gui.updateResourceBar(myCity->getWood(), myCity->getGold(), myCity->getFood());
+        // เปรมทำ - จบ
 
         window.setView(window.getDefaultView()); // คืนค่า View ปกติเพื่อวาด UI ทับข้างบนสุด
         gui.draw(window);
