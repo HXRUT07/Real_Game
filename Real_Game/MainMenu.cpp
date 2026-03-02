@@ -219,6 +219,18 @@ void MainMenu::handleEvent(const sf::Event& event)
 // ================================================================
 void MainMenu::update(float dt)
 {
+    // --- Video frame update ---
+    if (m_videoLoaded)
+    {
+        m_frameTimer += dt;
+        if (m_frameTimer >= m_frameDuration)
+        {
+            m_frameTimer = 0.f;
+            m_currentFrame = (m_currentFrame + 1) % (int)m_videoFrames.size();
+            m_videoSprite.setTexture(m_videoFrames[m_currentFrame]);
+        }
+    }
+
     for (auto& btn : m_buttons)
     {
         float target = btn.hovered ? 1.f : 0.f;
@@ -238,7 +250,9 @@ void MainMenu::update(float dt)
 void MainMenu::draw()
 {
     // 1. Background
-    if (m_bgLoaded)
+    if (m_videoLoaded)          // <-- เพิ่ม
+        m_window.draw(m_videoSprite);  // <-- เพิ่ม
+    else if (m_bgLoaded)        // <-- แก้จาก if เป็น else if
         m_window.draw(m_bgSprite);
     else
         m_window.draw(m_bgFallback);
@@ -264,4 +278,23 @@ void MainMenu::draw()
         m_window.draw(shadow);
     }
     m_window.draw(m_titleText);
+} 
+
+// ================================================================
+//  loadVideoFrames
+// ================================================================
+void MainMenu::loadVideoFrames(const std::string& folderPath, int frameCount)
+{
+    m_videoFrames.resize(frameCount);
+    for (int i = 0; i < frameCount; ++i)
+    {
+        char filename[256];
+        std::snprintf(filename, sizeof(filename),
+            "%s/frame_%04d.png", folderPath.c_str(), i + 1);
+        if (!m_videoFrames[i].loadFromFile(filename)) return;
+    }
+    m_videoSprite.setTexture(m_videoFrames[0]);
+    float scale = std::max(m_W / 960.f, m_H / 540.f);
+    m_videoSprite.setScale(scale, scale);
+    m_videoLoaded = true;
 }

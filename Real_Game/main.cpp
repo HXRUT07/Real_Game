@@ -32,6 +32,7 @@ int main() {
         MainMenu menu(window,
             "assets/background.png",
             "assets/fonts/Trajan Pro Regular.ttf");
+        menu.loadVideoFrames("assets/frames", 240);  // <-- เพิ่มบรรทัดนี้
         sf::Clock menuClock;
 
         while (window.isOpen()) {
