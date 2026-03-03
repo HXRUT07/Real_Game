@@ -1,5 +1,6 @@
 ﻿#pragma once
-#include "GameMap.h" // จำเป็นต้อง include เพื่อให้รู้จัก TerrainType
+
+enum class TerrainType { Grass, Water, Mountain, Forest, City };
 
 // โครงสร้างสำหรับเก็บค่าทรัพยากรที่จะส่งคืนกลับไป (ผลลัพธ์การฟาร์ม)
 struct ResourceYield {

@@ -99,22 +99,15 @@ bool GameMap::getGridCoords(sf::Vector2f mousePos, int& outR, int& outC) {
     return false;
 }
 
-void GameMap::handleMouseClick(sf::Vector2f mousePos)
-{
-    // คลิกขวา
-    if (sf::Mouse::isButtonPressed(sf::Mouse::Right)) {
-        selectedCity = nullptr;
-
-        for (auto& city : cities) {
-            sf::FloatRect bounds = city.getBounds(); 
-            if (bounds.contains(mousePos)) {
-                selectedCity = &city;
-                break;
-            }
+// เอาโค้ดสร้างเมืองกลับมา 
+void GameMap::handleMouseClick(sf::Vector2f mousePos) {
+    if (!m_gameStarted) {
+        int r, c;
+        if (getGridCoords(mousePos, r, c)) {
+            startGame(r, c); // <--- คำสั่งนี้คือตัวสร้างเมืองเลยครับ ขาดไม่ได้!
         }
     }
 }
-
 // --------------------------------------------------------
 // Game Logic (Start / Gen World)
 // --------------------------------------------------------
@@ -133,7 +126,9 @@ void GameMap::startGame(int spawnR, int spawnC) {
     );
 
     // สร้าง City (สี่เหลี่ยมฐาน)
-    cities.emplace_back(spawnR, spawnC, center);
+// เปรมทำ - ใช้ make_unique แทน emplace_back เพราะ RenderTexture copy ไม่ได้
+    cities.push_back(std::make_unique<City>(spawnR, spawnC, center));
+    // เปรมทำ - จบ
 
     generateWorldResources();
     spawnStarterResources(spawnR, spawnC);
@@ -331,6 +326,7 @@ void GameMap::updateColors() {
             case TerrainType::Water: c = sf::Color(25, 50, 100); break;
             case TerrainType::Mountain: c = sf::Color(60, 60, 60); break;
             case TerrainType::Forest: c = sf::Color(17, 70, 17); break;
+            case TerrainType::City: c = sf::Color(150, 120, 0); break; // <--- ดักบัคเผื่อไว้
             }
             tile.shape.setFillColor(c);
             tile.shape.setOutlineColor(sf::Color(30, 30, 30));
@@ -343,6 +339,7 @@ void GameMap::updateColors() {
             case TerrainType::Water: c = sf::Color(50, 100, 200); break;
             case TerrainType::Mountain: c = sf::Color(120, 120, 120); break;
             case TerrainType::Forest: c = sf::Color(34, 139, 34); break;
+            case TerrainType::City: c = sf::Color(255, 215, 0); break; // <--- ดักบัคเผื่อไว้
             }
             tile.shape.setFillColor(c);
             tile.shape.setOutlineColor(sf::Color(30, 30, 30));
@@ -380,19 +377,13 @@ void GameMap::updateHighlight(sf::Vector2f mousePos) {
 
 void GameMap::draw(sf::RenderWindow& window)
 {
-    for (const auto& tile : tiles)
+    for (const auto& tile : tiles) {
         window.draw(tile.shape);
-}
-
-void GameMap::drawCities(sf::RenderWindow& window)
-{
-    for (auto& city : cities) {
-        HexTile* tile = getTile(city.getR(), city.getC());
-        if (tile && tile->isExplored) {
-            city.draw(window);
-        }
     }
-}
+
+    // เรียกใช้วาดเมือง (รวมไว้ในนี้เลยจะได้เรียกง่ายๆ)
+    drawCities(window);
+
     // วาดช่องทางเดิน (Highlight สีเขียว)
     for (const auto& tile : tiles) {
         if (tile.isPath) {
@@ -417,10 +408,21 @@ void GameMap::drawCities(sf::RenderWindow& window)
     }
 }
 
+void GameMap::drawCities(sf::RenderWindow& window)
+{
+    // เปรมทำ - เปลี่ยน . เป็น -> เพราะใช้ unique_ptr
+    for (auto& city : cities) {
+        HexTile* tile = getTile(city->getR(), city->getC());
+        if (tile && tile->isExplored) {
+            city->draw(window);
+        }
+    }
+    // เปรมทำ - จบ
+}
+
 sf::ConvexShape GameMap::createHexShape(float x, float y, TerrainType type) {
     sf::ConvexShape hex;
     hex.setPointCount(6);
-
     for (int i = 0; i < 6; ++i) {
         float angle = 60.f * i - 30.f;
         float rad = angle * PI / 180.f;
@@ -429,8 +431,19 @@ sf::ConvexShape GameMap::createHexShape(float x, float y, TerrainType type) {
             HEX_SIZE * std::sin(rad)
         ));
     }
-
     hex.setPosition(x, y);
     hex.setOutlineThickness(-1.f);
     return hex;
+}
+
+// --- ฟังก์ชันเช็คว่าช่องนี้มีเมืองอยู่หรือเปล่า ---
+City* GameMap::getCityAt(int r, int c) {
+    // เปรมทำ - เปลี่ยน . เป็น -> และใช้ .get() เพราะใช้ unique_ptr
+    for (auto& city : cities) {
+        if (city->getR() == r && city->getC() == c) {
+            return city.get();
+        }
+    }
+    return nullptr;
+    // เปรมทำ - จบ
 }

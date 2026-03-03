@@ -12,6 +12,7 @@
 #include "Unit.h"        // <--- UNIT SYSTEM
 #include "ResourceManage.h" // <--- เพิ่ม Header ของระบบทรัพยากร
 #include "TurnManager.h" // <--- ระบบเทิร์น
+#include "MainMenu.h" //<--- ระบบเมนูหลัก
 
 int main() {
     // ตั้งค่า Seed สำหรับการสุ่ม (ใส่ใน Main ทีเดียวจบ)
@@ -25,6 +26,35 @@ int main() {
 
     // จำกัดเฟรมเรตหน่อย เครื่องจะได้ไม่ทำงานหนักเกินไปตอน Fullscreen
     window.setFramerateLimit(60);
+
+    // ----Main Menu----//(PLAY)
+    {
+        MainMenu menu(window,
+            "assets/background.png",
+            "assets/fonts/Trajan Pro Regular.ttf");
+        menu.loadVideoFrames("assets/frames", 240);  // <-- เพิ่มบรรทัดนี้
+        sf::Clock menuClock;
+
+        while (window.isOpen()) {
+            float dt = menuClock.restart().asSeconds();
+
+            sf::Event event;
+            while (window.pollEvent(event)) {
+                if (event.type == sf::Event::Closed)
+                    window.close();
+                menu.handleEvent(event);
+            }
+
+            menu.update(dt);
+
+            if (menu.getState() == MenuState::Play)  break;
+            if (menu.getState() == MenuState::Exit) { window.close(); break; }
+
+            window.clear();
+            menu.draw();
+            window.display();
+        }
+    }
 
     //----Map system----//(Yu)
     // 1. สร้าง Map แค่บรรทัดเดียว!
@@ -45,6 +75,9 @@ int main() {
     bool isGameRunning = false;    // ตัวแปรเช็คว่าจบช่วงเลือกจุดเกิดหรือยัง
     int unitNameCounter = 1;       // ตัวนับสำหรับตั้งชื่อ Unit อัตโนมัติ
     TurnManager turnSys(2); // สร้างระบบเทิร์นสำหรับ 2 ผู้เล่น
+
+    // --- ตัวแปรเก็บจำนวนเทิร์นที่ผ่านไป ---
+    int currentTurnNumber = 1;
 
     while (window.isOpen()) {
 
@@ -81,20 +114,41 @@ int main() {
                     // 2. ดึงข้อมูลทรัพยากรจากช่องที่คลิก
                     int r = 0, c = 0;
                     if (worldMap.getGridCoords(worldPos, r, c)) {
-                        HexTile* clickedTile = worldMap.getTile(r, c);
 
-                        // กฎ: ต้องมีช่องนี้อยู่จริง และ "ต้องเคยสำรวจแล้ว (isExplored)" เท่านั้น
-                        if (clickedTile != nullptr && clickedTile->isExplored) {
-                            // โชว์ข้อมูลทรัพยากรของช่องนั้น
-                            gui.showResourcePanel((float)window.getSize().x, clickedTile->gold, clickedTile->wood, clickedTile->food);
+                        // --- [อัปเดตระบบใหม่] เช็คก่อนว่ามีเมืองอยู่ตรงนี้ไหม ---
+                        City* clickedCity = worldMap.getCityAt(r, c);
+                        if (clickedCity != nullptr) {
+                            // ถ้ามีเมือง ให้โชว์หน้าต่างคลังหลวงของเมือง (CITY STOCKPILE)
+                            gui.showCityResourcePanel((float)window.getSize().x, clickedCity->getGold(), clickedCity->getWood(), clickedCity->getFood());
                         }
                         else {
-                            // ถ้าคลิกขวาใส่หมอกดำๆ ให้ปิดหน้าต่างทิ้ง
-                            gui.hideInfo();
+                            // ถ้าไม่มีเมือง ค่อยไปดึงข้อมูลทรัพยากรบนพื้นดินปกติ
+                            HexTile* clickedTile = worldMap.getTile(r, c);
+
+                            // กฎ: ต้องมีช่องนี้อยู่จริง และ "ต้องเคยสำรวจแล้ว (isExplored)" เท่านั้น
+                            if (clickedTile != nullptr && clickedTile->isExplored) {
+                                // โชว์ข้อมูลทรัพยากรของช่องนั้น
+                                gui.showResourcePanel((float)window.getSize().x, clickedTile->gold, clickedTile->wood, clickedTile->food);
+                            }
+                            else {
+                                // ถ้าคลิกขวาใส่หมอกดำๆ ให้ปิดหน้าต่างทิ้ง
+                                gui.hideInfo();
+                            }
                         }
                     }
                 }
                 else if (event.mouseButton.button == sf::Mouse::Left) {
+
+                    // ---  เช็คก่อนเลยว่าคลิกโดนปุ่ม "END TURN" หรือเปล่า? ---
+                    if (gui.isEndTurnButtonClicked(uiPos) && isGameRunning) {
+                        turnSys.endTurn(units);
+                        gui.clearSelection();
+                        selectedUnit = nullptr;
+                        worldMap.clearHighlight();
+                        std::cout << ">>> Switched to AI (Player 2) <<<" << std::endl;
+                        continue; // ข้ามการทำงานด้านล่างไปเลย เพราะคลิกปุ่มไปแล้ว
+                    }
+
                     // คลิกซ้าย: ซ่อน Info Panel เดิมก่อน
                     gui.hideInfo();
 
@@ -103,33 +157,30 @@ int main() {
                         // 3. ส่งให้ GameMap จัดการเลือกจุดเกิด
                         worldMap.handleMouseClick(worldPos);
 
-                        // เช็คว่า Map เริ่มเกมสำเร็จหรือยัง? (ถ้าเลือกจุดเกิดแล้ว Map จะตั้ง flag ว่าเริ่มเกม)
+                        // เช็คว่า Map เริ่มเกมสำเร็จหรือยัง?
                         if (worldMap.isGameStarted()) {
                             isGameRunning = true;
 
                             // *** Spawn ทหารตัวแรกตรงจุดที่คลิก ***
                             int spawnR = 0, spawnC = 0;
-                            // ต้องใช้ฟังก์ชัน getGridCoords ที่เพิ่มใน GameMap.h
                             if (worldMap.getGridCoords(worldPos, spawnR, spawnC)) {
                                 //  ใส่เลข 1 ด้านหลังเพื่อให้ตัวนี้เป็นของ Player 1 และสร้างศัตรู Player 2
                                 units.emplace_back("Commander", spawnR, spawnC, 1);
 
-                                // ดันให้ศัตรูไปเกิดไกลๆ เลย (บวก 8 ช่อง) เพื่อให้ชัวร์ว่าอยู่ในหมอกแน่นอน
+                                // ดันให้ศัตรูไปเกิดไกลๆ เลย (บวก 8 ช่อง)
                                 units.emplace_back("Enemy", spawnR + 8, spawnC + 8, 2);
 
-                                std::cout << "Commander Spawned at " << spawnR << "," << spawnC << std::endl;
+                                std::cout << "City Founded and Commander Spawned at " << spawnR << "," << spawnC << std::endl;
                             }
                         }
                     }
                     // --- PHASE 2: ควบคุมทหาร (Gameplay) ---
                     else {
                         int r = 0, c = 0;
-                        // ตรวจสอบว่าคลิกโดนช่องไหนใน Grid
                         if (worldMap.getGridCoords(worldPos, r, c)) {
 
                             HexTile* clickedTile = worldMap.getTile(r, c);
 
-                            //  ถ้ายิงคลิกไปโดนหมอกดำ (มองไม่เห็น) ให้ตัดจบการทำงาน ถือว่าคลิกพื้นที่ว่างเปล่า!
                             if (clickedTile == nullptr || !clickedTile->isVisible) {
                                 gui.clearSelection();
                                 selectedUnit = nullptr;
@@ -146,10 +197,8 @@ int main() {
 
                                 // กรณี A: คลิกโดนช่องที่มี Unit (เลือก Unit)
                                 if (!stackInTile.empty()) {
-                                    // ส่งรายการ Unit ไปให้ UI แสดงผลทางขวา
                                     gui.setSelectionList(stackInTile);
 
-                                    // ตอนจะ Auto-select หาตัวที่มี AP ให้เพิ่มเงื่อนไขตรวจเช็คเจ้าของด้วย
                                     selectedUnit = nullptr;
                                     for (auto* u : stackInTile) {
                                         // กฎ: ต้องมี AP และ "ต้องเป็นของ Player ปัจจุบันเท่านั้น!"
@@ -159,19 +208,17 @@ int main() {
                                         }
                                     }
 
-                                    // ถ้าเลือกได้ ให้คำนวณและแสดงช่องเดิน
                                     if (selectedUnit) {
                                         worldMap.calculateValidMoves(selectedUnit->getR(), selectedUnit->getC(), selectedUnit->getMoveRange());
                                         std::cout << "Unit Selected: " << selectedUnit->getName() << std::endl;
                                     }
                                     else {
-                                        worldMap.clearHighlight(); // ไม่มีตัวไหนมี AP
+                                        worldMap.clearHighlight();
                                         std::cout << "All units in this stack have no AP or not your turn." << std::endl;
                                     }
                                 }
                                 // กรณี B: คลิกพื้นที่ว่าง และมี Unit ถูกเลือกอยู่ (สั่งเดิน)
                                 else if (selectedUnit != nullptr) {
-                                    // ตรวจสอบว่าช่องเป้าหมายเดินไปได้หรือไม่ (สีเขียว)
                                     if (worldMap.isValidMove(r, c)) {
                                         // 1. ย้ายตำแหน่ง
                                         selectedUnit->moveTo(r, c);
@@ -180,16 +227,12 @@ int main() {
                                         // 3. เปิดหมอก (ระยะ 1 ช่อง)
                                         worldMap.revealFog(r, c, 1);
 
-                                        // จบการเดิน: เคลียร์ไฮไลท์ และ ยกเลิกการเลือก
                                         worldMap.clearHighlight();
                                         gui.clearSelection(); // ปิดแถบขวา
                                         selectedUnit = nullptr;
                                         std::cout << "Unit Moved!" << std::endl;
                                     }
                                     else {
-                                        // เดินไม่ได้ (อาจจะติดสิ่งกีดขวาง หรือ อยู่นอกระยะ)
-                                        // ให้ยกเลิกการเลือกไปเลย หรือ จะแค่แจ้งเตือนก็ได้
-                                        // ในที่นี้เลือกที่จะยกเลิกการเลือกเพื่อความลื่นไหล
                                         gui.clearSelection();
                                         selectedUnit = nullptr;
                                         worldMap.clearHighlight();
@@ -251,6 +294,10 @@ int main() {
 
             // AI จบเทิร์น โยนกลับให้ผู้เล่น 1 ทันที
             turnSys.endTurn(units);
+
+            // ---  วนกลับมาตาเราปุ๊บ ก็นับเป็นเทิร์นใหม่ทันที ---
+            currentTurnNumber++;
+
             std::cout << ">>> Switched to Player 1 <<<" << std::endl;
         }
 
@@ -294,6 +341,14 @@ int main() {
         }
         worldMap.drawCities(window);
 
+        // --- ส่งข้อมูลให้ UI อัปเดตเลขเทิร์นก่อนวาด ---
+        gui.updateTurnInfo(turnSys.getCurrentPlayer(), currentTurnNumber);
+
+        // เปรมทำ - ส่งข้อมูลทรัพยากรของเมืองไปแสดงมุมขวาบน
+        City* myCity = worldMap.getFirstCity();
+        if (myCity) gui.updateResourceBar(myCity->getWood(), myCity->getGold(), myCity->getFood());
+        // เปรมทำ - จบ
+
         window.setView(window.getDefaultView()); // คืนค่า View ปกติเพื่อวาด UI ทับข้างบนสุด
         gui.draw(window);
 
@@ -302,9 +357,12 @@ int main() {
 
     return 0; // <---  ย้าย return 0 มาไว้จุดล่างสุดนอกลูป
 
+    // =========================================================================
+    // โค้ดด้านล่างนี้ถูกเก็บรักษาไว้ 100% ตามคำขอครับ 
+    // (ใส่ #if 0 ครอบไว้เพื่อไม่ให้คอมพิวเตอร์งงตอนรันโปรแกรมครับ)
+    // =========================================================================
+#if 0
     //panel
-
-    sf::RenderWindow window(sf::VideoMode(1200, 700), "City Panel");
 
     GameMap gameMap(10, 10);
 
@@ -349,4 +407,7 @@ int main() {
 
         window.display();
     }
+#endif
 }
+
+// ไม่ต้องเอาคอมเมนต์ออก
