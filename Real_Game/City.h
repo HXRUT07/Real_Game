@@ -1,7 +1,7 @@
 ﻿#pragma once
 #include <SFML/Graphics.hpp>
 #include <string>
-#include "ResourceManage.h"
+#include "ResourceManage.h"   
 
 class City {
 private:
@@ -19,8 +19,8 @@ public:
     int getR() const { return gridR; }
     int getC() const { return gridC; }
 
-    void setName(const std::string& newName) { name = newName; }
     std::string getName() const { return name; }
+    void setName(const std::string& newName) { name = newName; }
 
     ResourceYield getTotalResource() const;
 
