@@ -31,7 +31,7 @@ public:
 
     std::string getName() const { return name; }
     void setName(const std::string& newName) { name = newName; }
-    std::string getName() const { return name; }
+
     // ---ฟังก์ชันจัดการคลังหลวง ---
     int getGold() const { return stockpile.gold; }
     int getWood() const { return stockpile.wood; }

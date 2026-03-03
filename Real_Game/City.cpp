@@ -86,3 +86,7 @@ std::string City::getCityInfo() const
     ss << "Upgraded: " << (upgraded ? "Yes" : "No");
     return ss.str();
 }
+ResourceYield City::getTotalResource() const
+{
+    return stockpile;
+}
