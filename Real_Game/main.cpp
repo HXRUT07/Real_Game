@@ -78,6 +78,11 @@ int main() {
     // --- ตัวแปรเก็บจำนวนเทิร์นที่ผ่านไป ---
     int currentTurnNumber = 1;
 
+    // --- ตัวแปรคลังสมบัติของผู้เล่นที่ 1 ---
+    int p1TotalGold = 0;
+    int p1TotalWood = 0;
+    int p1TotalFood = 0;
+
     while (window.isOpen()) {
 
         sf::Vector2f mousePosScreen = window.mapPixelToCoords(sf::Mouse::getPosition(window));
@@ -114,7 +119,7 @@ int main() {
                     int r = 0, c = 0;
                     if (worldMap.getGridCoords(worldPos, r, c)) {
 
-                        // --- [อัปเดตระบบใหม่] เช็คก่อนว่ามีเมืองอยู่ตรงนี้ไหม ---
+                        // --- เช็คก่อนว่ามีเมืองอยู่ตรงนี้ไหม ---
                         City* clickedCity = worldMap.getCityAt(r, c);
                         if (clickedCity != nullptr) {
                             // ถ้ามีเมือง ให้โชว์หน้าต่างคลังหลวงของเมือง (CITY STOCKPILE)
@@ -138,8 +143,8 @@ int main() {
                 }
                 else if (event.mouseButton.button == sf::Mouse::Left) {
 
-                    // ---  เช็คก่อนเลยว่าคลิกโดนปุ่ม "END TURN" หรือเปล่า? ---
-                    if (gui.isEndTurnButtonClicked(uiPos) && isGameRunning) {
+                    // ---  เช็คก่อนเลยว่าคลิกโดนปุ่ม "END TURN" หรือเปล่า? (เช็คจาก isGameStarted ใน worldMap) ---
+                    if (gui.isEndTurnButtonClicked(uiPos) && worldMap.isGameStarted()) {
                         turnSys.endTurn(units);
                         gui.clearSelection();
                         selectedUnit = nullptr;
@@ -152,25 +157,27 @@ int main() {
                     gui.hideInfo();
 
                     // --- PHASE 1: เลือกจุดเกิด ---
-                    if (!isGameRunning) {
-                        // 3. ส่งให้ GameMap จัดการเลือกจุดเกิด
+                    if (!worldMap.isGameStarted()) {
+                        // 3. ส่งให้ GameMap จัดการเลือกจุดเกิด (ระบบเสกป่าและเขาทำงานปกติ)
                         worldMap.handleMouseClick(worldPos);
 
-                        // เช็คว่า Map เริ่มเกมสำเร็จหรือยัง? (ถ้าเลือกจุดเกิดแล้ว Map จะตั้ง flag ว่าเริ่มเกม)
+                        // เช็คว่า Map เริ่มเกมสำเร็จหรือยัง? 
                         if (worldMap.isGameStarted()) {
                             isGameRunning = true;
 
                             // *** Spawn ทหารตัวแรกตรงจุดที่คลิก ***
                             int spawnR = 0, spawnC = 0;
-                            // ต้องใช้ฟังก์ชัน getGridCoords ที่เพิ่มใน GameMap.h
                             if (worldMap.getGridCoords(worldPos, spawnR, spawnC)) {
-                                //  ใส่เลข 1 ด้านหลังเพื่อให้ตัวนี้เป็นของ Player 1 และสร้างศัตรู Player 2
                                 units.emplace_back("Commander", spawnR, spawnC, 1);
-
-                                // ดันให้ศัตรูไปเกิดไกลๆ เลย (บวก 8 ช่อง) เพื่อให้ชัวร์ว่าอยู่ในหมอกแน่นอน
                                 units.emplace_back("Enemy", spawnR + 8, spawnC + 8, 2);
-
                                 std::cout << "City Founded and Commander Spawned at " << spawnR << "," << spawnC << std::endl;
+
+                                // --- [NEW] ดึงค่าฟิกจาก spawnStarterResources เข้าไปแสดงในคลังสมบัติ UI ทันที ---
+                                ResourceYield starter = worldMap.getStarterPackValues();
+                                p1TotalGold = starter.gold;
+                                p1TotalWood = starter.wood;
+                                p1TotalFood = starter.food;
+                                std::cout << "Loaded fixed starter pack from spawnStarterResources: G:" << starter.gold << " W:" << starter.wood << " F:" << starter.food << std::endl;
                             }
                         }
                     }
@@ -228,6 +235,26 @@ int main() {
                                     if (worldMap.isValidMove(r, c)) {
                                         // 1. ย้ายตำแหน่ง
                                         selectedUnit->moveTo(r, c);
+
+                                        // --- ระบบเก็บของเข้าคลัง (Harvest on Move) ---
+                                        HexTile* targetTile = worldMap.getTile(r, c);
+                                        if (targetTile != nullptr) {
+                                            // ถ้าช่องนั้นมีทรัพยากรอยู่ ให้ดึงเข้าคลัง Player 1
+                                            if (targetTile->gold > 0 || targetTile->wood > 0 || targetTile->food > 0) {
+                                                p1TotalGold += targetTile->gold;
+                                                p1TotalWood += targetTile->wood;
+                                                p1TotalFood += targetTile->food;
+
+                                                std::cout << "[Harvested] G:" << targetTile->gold << " W:" << targetTile->wood << " F:" << targetTile->food << std::endl;
+
+                                                // ดูดเสร็จแล้ว เคลียร์ช่องนั้นให้เกลี้ยง (กันเดินปั๊มของ)
+                                                targetTile->gold = 0;
+                                                targetTile->wood = 0;
+                                                targetTile->food = 0;
+                                            }
+                                        }
+                                        // -------------------------------------------------
+
                                         // 2. หัก AP
                                         selectedUnit->consumeAP(1);
                                         // 3. เปิดหมอก (ระยะ 1 ช่อง)
@@ -273,7 +300,7 @@ int main() {
 
             //  ใช้ KeyReleased (ปล่อยนิ้ว) และแก้จาก Enter เป็น Return
             if (event.type == sf::Event::KeyReleased) {
-                if (event.key.code == sf::Keyboard::Return && isGameRunning) { // <--- ลบ NumpadEnter ออกแล้ว
+                if (event.key.code == sf::Keyboard::Return && worldMap.isGameStarted()) { // <--- ลบ NumpadEnter ออกแล้ว
                     // กดจบเทิร์นได้เฉพาะตอนที่เป็นตาของเราเท่านั้น
                     if (turnSys.getCurrentPlayer() == 1) {
                         turnSys.endTurn(units); // เรียกสลับเทิร์นและรีเซ็ต AP
@@ -292,7 +319,7 @@ int main() {
         // -----------------------------------------------------------------------
         // ระบบสมอง AI (จะทำงานทันทีเมื่อเป็นตาของ Player 2)
         // -----------------------------------------------------------------------
-        if (isGameRunning && turnSys.getCurrentPlayer() == 2) {
+        if (worldMap.isGameStarted() && turnSys.getCurrentPlayer() == 2) {
             std::cout << "AI is processing..." << std::endl;
 
             // ตอนนี้เราให้ AI ข้ามเทิร์นตัวเองไปก่อน 
@@ -351,11 +378,17 @@ int main() {
         }
         worldMap.drawCities(window);
 
-        // --- ส่งข้อมูลให้ UI อัปเดตเลขเทิร์นก่อนวาด ---
+        // --- ส่งข้อมูลให้ UI อัปเดตเลขเทิร์นและคลังสมบัติก่อนวาด ---
         gui.updateTurnInfo(turnSys.getCurrentPlayer(), currentTurnNumber);
 
+        if (worldMap.isGameStarted()) {
+            gui.updatePlayerTreasury(p1TotalGold, p1TotalWood, p1TotalFood);
+        }
+
         window.setView(window.getDefaultView()); // คืนค่า View ปกติเพื่อวาด UI ทับข้างบนสุด
-        gui.draw(window);
+
+        // --- ส่ง worldMap.isGameStarted() เข้าไปบังคับซ่อน UI ---
+        gui.draw(window, worldMap.isGameStarted());
 
         window.display();
     } // <---  วงเล็บปิดของ while(window.isOpen())

@@ -1,8 +1,8 @@
 ﻿#pragma once
 #include <SFML/Graphics.hpp>
 #include <string>
-#include <vector> // <---  จำเป็นสำหรับ std::vector
-#include "Unit.h" // <---  ต้องรู้จัก Unit เพื่อเก็บ Pointer
+#include <vector>
+#include "Unit.h"
 
 class MouseUI {
 private:
@@ -11,12 +11,18 @@ private:
 
     // --- ส่วนเดิม (Tooltip/Resource) ---
     bool isPanelVisible;
-    sf::RectangleShape infoPanel;
-    sf::Text infoContent;
+    sf::RectangleShape infoPanel;    // <--- [คืนชีพ] เอากลับมาแล้วครับ!
+    sf::Text infoContent;            // <--- [คืนชีพ] เอากลับมาแล้วครับ!
+    std::string m_targetResourceStr; // เก็บข้อความของช่อง/เมืองที่คลิกขวา
+
+    // --- ตัวแปรเก็บคลังสมบัติของผู้เล่น ---
+    int m_playerGold = 0;
+    int m_playerWood = 0;
+    int m_playerFood = 0;
 
     // --- ส่วนแถบขวา (Side Panel) ---
-    bool m_showSidePanel = false;        // สถานะโชว์แถบขวา
-    std::vector<Unit*> m_selectedUnits;  // รายการยูนิตที่จะโชว์
+    bool m_showSidePanel = false;
+    std::vector<Unit*> m_selectedUnits;
 
     // ---  ตัวแปรสำหรับปุ่มจบเทิร์น & เลขเทิร์น ---
     sf::RectangleShape endTurnBtn;
@@ -26,21 +32,22 @@ private:
 public:
     MouseUI(); // Constructor
 
-    // ฟังก์ชันเดิม (ปรับลำดับเป็น wood, gold, food ให้ตรงกับ main.cpp)
-    void showResourcePanel(float windowWidth, int wood, int gold, int food);
+    void showResourcePanel(float windowWidth, int gold, int wood, int food);
     void hideInfo();
 
-    // ---  ฟังก์ชันโชว์คลังหลวงของเมือง ---
     void showCityResourcePanel(float windowWidth, int gold, int wood, int food);
 
-    // ฟังก์ชันจัดการแถบขวา
-    void setSelectionList(const std::vector<Unit*>& units); // รับยูนิตมาโชว์
-    void clearSelection();                                  // ปิดแถบ
+    // --- ฟังก์ชันอัปเดตยอดคลังสมบัติของผู้เล่น ---
+    void updatePlayerTreasury(int gold, int wood, int food);
+
+    void setSelectionList(const std::vector<Unit*>& units);
+    void clearSelection();
 
     void update(sf::Vector2f mousePos);
-    void draw(sf::RenderWindow& window);
 
-    // ---  ฟังก์ชันอัปเดตเลขเทิร์นและเช็คปุ่ม ---
+    // --- เพิ่ม isGameStarted เพื่อซ่อน UI ก่อนเริ่มเกม ---
+    void draw(sf::RenderWindow& window, bool isGameStarted);
+
     void updateTurnInfo(int playerTurn, int turnNumber);
     bool isEndTurnButtonClicked(sf::Vector2f mousePos);
 };

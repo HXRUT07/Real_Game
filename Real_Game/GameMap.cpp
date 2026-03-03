@@ -9,15 +9,11 @@
 
 const float PI = 3.14159265f;
 
-// [สำคัญ] ต้องประกาศ struct Node ไว้ตรงนี้ ก่อนที่จะถูกเรียกใช้
 struct Node {
     int r, c;
     int cost;
 };
 
-// --------------------------------------------------------
-// Constructor
-// --------------------------------------------------------
 GameMap::GameMap(int r, int c) {
     this->rows = r;
     this->cols = c;
@@ -39,8 +35,6 @@ GameMap::GameMap(int r, int c) {
             tile.gridR = row;
             tile.gridC = col;
             tile.type = TerrainType::Grass;
-
-            // ตอนเริ่มเกม เปิดให้เห็นกระดานเปล่าก่อน
             tile.isExplored = true;
             tile.isVisible = true;
 
@@ -50,21 +44,14 @@ GameMap::GameMap(int r, int c) {
     updateColors();
 }
 
-// --------------------------------------------------------
-// Interaction & Helpers
-// --------------------------------------------------------
-
-// --- [NEW] ฟังก์ชันดึง Pointer ของ Tile (Implement ตรงนี้) ---
 HexTile* GameMap::getTile(int r, int c) {
-    // เช็คขอบเขต array กันแครช
     if (r >= 0 && r < rows && c >= 0 && c < cols) {
-        // สูตรคำนวณ Index ของ 1D Array จาก 2D
         int index = r * cols + c;
         if (index >= 0 && index < tiles.size()) {
             return &tiles[index];
         }
     }
-    return nullptr; // ถ้าหาไม่เจอ หรือ ออกนอกแมพ
+    return nullptr;
 }
 
 bool GameMap::getGridCoords(sf::Vector2f mousePos, int& outR, int& outC) {
@@ -72,45 +59,37 @@ bool GameMap::getGridCoords(sf::Vector2f mousePos, int& outR, int& outC) {
     HexTile* closestTile = nullptr;
 
     for (auto& tile : tiles) {
-        // 1. หาจุดศูนย์กลางของหกเหลี่ยม
         sf::FloatRect bounds = tile.shape.getGlobalBounds();
         float centerX = bounds.left + bounds.width / 2.0f;
         float centerY = bounds.top + bounds.height / 2.0f;
 
-        // 2. คำนวณระยะห่างจากเมาส์ไปยังจุดศูนย์กลาง
         float dx = mousePos.x - centerX;
         float dy = mousePos.y - centerY;
         float dist = std::sqrt(dx * dx + dy * dy);
 
-        // 3. จำช่องที่ใกล้เมาส์ที่สุดเอาไว้
         if (dist < minDist) {
             minDist = dist;
             closestTile = &tile;
         }
     }
 
-    // ถ้าระยะห่างน้อยกว่าขนาดของหกเหลี่ยม แปลว่าคลิกโดนช่องนั้นจริงๆ
     if (closestTile && minDist <= HEX_SIZE) {
         outR = closestTile->gridR;
         outC = closestTile->gridC;
         return true;
     }
-
     return false;
 }
 
-// เอาโค้ดสร้างเมืองกลับมา 
 void GameMap::handleMouseClick(sf::Vector2f mousePos) {
     if (!m_gameStarted) {
         int r, c;
         if (getGridCoords(mousePos, r, c)) {
-            startGame(r, c); // <--- คำสั่งนี้คือตัวสร้างเมืองเลยครับ ขาดไม่ได้!
+            startGame(r, c);
         }
     }
 }
-// --------------------------------------------------------
-// Game Logic (Start / Gen World)
-// --------------------------------------------------------
+
 void GameMap::startGame(int spawnR, int spawnC) {
     if (m_gameStarted) return;
     m_gameStarted = true;
@@ -118,29 +97,21 @@ void GameMap::startGame(int spawnR, int spawnC) {
     int idx = spawnR * cols + spawnC;
     if (idx < 0 || idx >= tiles.size()) return;
 
-    // เอาจุด center ของ hex ที่คลิก
     sf::FloatRect bounds = tiles[idx].shape.getGlobalBounds();
-    sf::Vector2f center(
-        bounds.left + bounds.width / 2.f,
-        bounds.top + bounds.height / 2.f
-    );
+    sf::Vector2f center(bounds.left + bounds.width / 2.f, bounds.top + bounds.height / 2.f);
 
-    // สร้าง City (สี่เหลี่ยมฐาน)
     cities.emplace_back(spawnR, spawnC, center);
 
     generateWorldResources();
     spawnStarterResources(spawnR, spawnC);
 
-    // เคลียร์จุดเกิดให้เป็นหญ้า
     if (idx >= 0 && idx < tiles.size()) tiles[idx].type = TerrainType::Grass;
 
-    // รีเซ็ตหมอกให้มืดทั้งโลก
     for (auto& tile : tiles) {
         tile.isExplored = false;
         tile.isVisible = false;
     }
 
-    // ให้ ResourceManage สุ่มของใส่ทุกช่อง
     for (auto& tile : tiles) {
         ResourceYield yield = ResourceManage::generateResources(tile.type);
         tile.gold = yield.gold;
@@ -148,7 +119,6 @@ void GameMap::startGame(int spawnR, int spawnC) {
         tile.food = yield.food;
     }
 
-    // เปิดหมอกจุดเกิด
     revealFog(spawnR, spawnC, 1);
     updateColors();
 }
@@ -181,6 +151,11 @@ void GameMap::spawnStarterResources(int r, int c) {
     int mr = std::min(rows - 1, std::max(0, r - 2));
     int mc = std::min(cols - 1, std::max(0, c - 2));
     createCluster(TerrainType::Mountain, mr, mc, 4);
+
+    // --- กำหนดค่าคงที่เริ่มต้น (Starter Pack) ทิ้งไว้ที่นี่ ---
+    m_starterPack.gold = 100;
+    m_starterPack.wood = 50;
+    m_starterPack.food = 50;
 }
 
 void GameMap::createCluster(TerrainType type, int startR, int startC, int clusterSize) {
@@ -214,13 +189,9 @@ void GameMap::createCluster(TerrainType type, int startR, int startC, int cluste
     }
 }
 
-// --------------------------------------------------------
-// Pathfinding & Visibility
-// --------------------------------------------------------
 void GameMap::revealFog(int centerR, int centerC, int sightRange) {
     bool changed = false;
     for (auto& tile : tiles) {
-        // สูตรระยะห่างวงกลม (Axial Distance)
         int r1 = centerR;
         int c1 = centerC - (centerR - (centerR & 1)) / 2;
         int r2 = tile.gridR;
@@ -228,7 +199,6 @@ void GameMap::revealFog(int centerR, int centerC, int sightRange) {
         int dist = (std::abs(r1 - r2) + std::abs(c1 - c2) + std::abs((r1 - r2) + (c1 - c2))) / 2;
 
         if (dist <= sightRange) {
-            // เปิดหมอก (Explored) และทำให้มองเห็น (Visible)
             if (!tile.isExplored || !tile.isVisible) {
                 tile.isExplored = true;
                 tile.isVisible = true;
@@ -236,7 +206,6 @@ void GameMap::revealFog(int centerR, int centerC, int sightRange) {
             }
         }
         else {
-            // นอกระยะสายตา -> ปิดการมองเห็น (แต่ยัง Explored อยู่ถ้าเคยเดินผ่าน)
             if (tile.isVisible) {
                 tile.isVisible = false;
                 changed = true;
@@ -263,7 +232,7 @@ void GameMap::calculateValidMoves(int startR, int startC, int moveRange) {
 
         if (curr.cost > 0) {
             int idx = curr.r * cols + curr.c;
-            tiles[idx].isPath = true; // Highlight
+            tiles[idx].isPath = true;
         }
 
         if (curr.cost >= moveRange) continue;
@@ -282,8 +251,7 @@ void GameMap::calculateValidMoves(int startR, int startC, int moveRange) {
             if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
                 int nIdx = nr * cols + nc;
 
-                // กฎการเดิน: ไม่เคยไป + ต้องมองเห็นอยู่ (isVisible)
-                if (!visited[nIdx] && tiles[nIdx].isVisible) { // <--- เช็คตรงนี้
+                if (!visited[nIdx] && tiles[nIdx].isVisible) {
                     visited[nIdx] = true;
                     q.push({ nr, nc, curr.cost + 1 });
                 }
@@ -304,40 +272,32 @@ bool GameMap::isValidMove(int r, int c) {
     return false;
 }
 
-// --------------------------------------------------------
-// Graphics & Visuals
-// --------------------------------------------------------
 void GameMap::updateColors() {
     for (auto& tile : tiles) {
-        // [MODIFIED] Logic การวาดสี: เช็คจาก Explored/Visible
-
         if (!tile.isExplored) {
-            // ยังไม่เคยมา -> ดำมืด
             tile.shape.setFillColor(sf::Color(10, 10, 10));
             tile.shape.setOutlineColor(sf::Color(20, 20, 20));
         }
         else if (!tile.isVisible) {
-            // เคยมาแต่ตอนนี้มองไม่เห็น -> สีเทาๆ (Fog of War)
             sf::Color c;
             switch (tile.type) {
             case TerrainType::Grass: c = sf::Color(50, 100, 50); break;
             case TerrainType::Water: c = sf::Color(25, 50, 100); break;
             case TerrainType::Mountain: c = sf::Color(60, 60, 60); break;
             case TerrainType::Forest: c = sf::Color(17, 70, 17); break;
-            case TerrainType::City: c = sf::Color(150, 120, 0); break; // <--- ดักบัคเผื่อไว้
+            case TerrainType::City: c = sf::Color(150, 120, 0); break;
             }
             tile.shape.setFillColor(c);
             tile.shape.setOutlineColor(sf::Color(30, 30, 30));
         }
         else {
-            // มองเห็นชัดเจน -> สีสดใส
             sf::Color c;
             switch (tile.type) {
             case TerrainType::Grass: c = sf::Color(100, 200, 100); break;
             case TerrainType::Water: c = sf::Color(50, 100, 200); break;
             case TerrainType::Mountain: c = sf::Color(120, 120, 120); break;
             case TerrainType::Forest: c = sf::Color(34, 139, 34); break;
-            case TerrainType::City: c = sf::Color(255, 215, 0); break; // <--- ดักบัคเผื่อไว้
+            case TerrainType::City: c = sf::Color(255, 215, 0); break;
             }
             tile.shape.setFillColor(c);
             tile.shape.setOutlineColor(sf::Color(30, 30, 30));
@@ -349,9 +309,8 @@ void GameMap::updateHighlight(sf::Vector2f mousePos) {
     float minDist = 999999.0f;
     HexTile* closestTile = nullptr;
 
-    // รีเซ็ตการชี้เมาส์ทุกช่องก่อน และหาช่องที่ใกล้เมาส์ที่สุด
     for (auto& tile : tiles) {
-        tile.isHovered = false; // ปิดกรอบขาวทุกช่อง
+        tile.isHovered = false;
 
         sf::FloatRect bounds = tile.shape.getGlobalBounds();
         float centerX = bounds.left + bounds.width / 2.0f;
@@ -367,33 +326,25 @@ void GameMap::updateHighlight(sf::Vector2f mousePos) {
         }
     }
 
-    // สั่งเปิดกรอบขาวเฉพาะช่องที่ใกล้เมาส์ที่สุดช่องเดียว
     if (closestTile && minDist <= HEX_SIZE) {
         closestTile->isHovered = true;
     }
 }
 
-void GameMap::draw(sf::RenderWindow& window)
-{
+void GameMap::draw(sf::RenderWindow& window) {
     for (const auto& tile : tiles) {
         window.draw(tile.shape);
     }
-
-    // เรียกใช้วาดเมือง (รวมไว้ในนี้เลยจะได้เรียกง่ายๆ)
     drawCities(window);
-
-    // วาดช่องทางเดิน (Highlight สีเขียว)
     for (const auto& tile : tiles) {
         if (tile.isPath) {
             sf::ConvexShape h = tile.shape;
-            h.setFillColor(sf::Color(0, 255, 0, 100)); // สีเขียวโปร่งใส
+            h.setFillColor(sf::Color(0, 255, 0, 100));
             h.setOutlineColor(sf::Color::Green);
             h.setOutlineThickness(2.0f);
             window.draw(h);
         }
     }
-
-    // วาดกรอบเมาส์ชี้ (Mouse Hover)
     for (const auto& tile : tiles) {
         if (tile.isHovered && tile.isExplored) {
             sf::ConvexShape h = tile.shape;
@@ -401,13 +352,11 @@ void GameMap::draw(sf::RenderWindow& window)
             h.setOutlineColor(sf::Color::White);
             h.setOutlineThickness(3.0f);
             window.draw(h);
-            // ไม่ break เพราะบางทีเมาส์อาจจะคาบเกี่ยวเส้นขอบ
         }
     }
 }
 
-void GameMap::drawCities(sf::RenderWindow& window)
-{
+void GameMap::drawCities(sf::RenderWindow& window) {
     for (auto& city : cities) {
         HexTile* tile = getTile(city.getR(), city.getC());
         if (tile && tile->isExplored) {
@@ -428,13 +377,11 @@ sf::ConvexShape GameMap::createHexShape(float x, float y, TerrainType type) {
             HEX_SIZE * std::sin(rad)
         ));
     }
-
     hex.setPosition(x, y);
     hex.setOutlineThickness(-1.f);
     return hex;
 }
 
-// --- ฟังก์ชันเช็คว่าช่องนี้มีเมืองอยู่หรือเปล่า ---
 City* GameMap::getCityAt(int r, int c) {
     for (auto& city : cities) {
         if (city.getR() == r && city.getC() == c) {

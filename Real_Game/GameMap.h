@@ -21,7 +21,7 @@ struct HexTile {
     bool isVisible = false;   // มองเห็นอยู่ไหม (ในระยะสายตา)
     bool isPath = false;
 
-    
+
     int gold = 0;
     int wood = 0;
     int food = 0;
@@ -57,6 +57,9 @@ public:
     // ---  ฟังก์ชันเช็คว่าช่องนี้มีเมืองตั้งอยู่ไหม (สำหรับคลิกขวาดูคลังหลวง) ---
     City* getCityAt(int r, int c);
 
+    // --- [NEW] ฟังก์ชันสำหรับดึงค่า Starter Pack ออกไปให้ main.cpp ใช้ ---
+    ResourceYield getStarterPackValues() const { return m_starterPack; }
+
 private:
     std::vector<City> cities;
     City* selectedCity = nullptr;
@@ -64,6 +67,9 @@ private:
     int rows;
     int cols;
     bool m_gameStarted = false;
+
+    ResourceYield m_starterPack; // [NEW] เก็บค่าเริ่มต้นที่มาจาก spawnStarterResources
+
     // Internal Helpers
     sf::ConvexShape createHexShape(float x, float y, TerrainType type);
     void createCluster(TerrainType type, int startR, int startC, int clusterSize);
