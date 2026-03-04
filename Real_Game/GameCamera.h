@@ -5,6 +5,9 @@
 
 class GameCamera {
 public:
+    // เปรมทำ - getter zoom level สำหรับเมฆ
+    float getZoomLevel() const { return m_currentZoom; }
+    // เปรมทำ - จบ
     // Constructor รับขนาดหน้าจอเริ่มต้น
     GameCamera(float width, float height);
 
