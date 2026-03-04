@@ -4,8 +4,8 @@
 #include <vector>
 #include <string>
 
-class Unit;
-class GameMap;
+#include "Unit.h"
+#include "GameMap.h"
 
 class CombatManager {
 private:
@@ -16,6 +16,7 @@ private:
     int m_atkStartR, m_atkStartC;
     int m_defTargetR, m_defTargetC;
     int m_attackerOwner;
+    bool m_isArmyAttack;
 
     sf::Font m_font;
     bool m_hasFont;
@@ -27,6 +28,6 @@ public:
     void setFont(const sf::Font& font);
     bool isCombatActive() const { return m_isRolling; }
 
-    void initiateCombat(int atkR, int atkC, int defR, int defC, int attackerOwner, sf::Sound& diceSound);
+    void initiateCombat(int atkR, int atkC, int defR, int defC, int attackerOwner, sf::Sound& diceSound, bool isArmyAttack);
     void updateAndDraw(sf::RenderWindow& window, std::vector<Unit>& units, GameMap& worldMap, sf::Sound& diceSound, sf::Sound& hitSound);
-}; // <--- สำคัญมาก: ห้ามลบเซมิโคลอน (;) ตรงนี้เด็ดขาดครับ
+};

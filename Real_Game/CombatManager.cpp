@@ -1,11 +1,9 @@
 ﻿#include "CombatManager.h"
-#include "Unit.h"    // <--- ย้าย Include มาไว้ใน .cpp แทน
-#include "GameMap.h" // <--- ย้าย Include มาไว้ใน .cpp แทน
 #include <cstdlib>
 #include <iostream>
 #include <algorithm>
 
-CombatManager::CombatManager() : m_isRolling(false), m_hasFont(false) {}
+CombatManager::CombatManager() : m_isRolling(false), m_hasFont(false), m_isArmyAttack(true) {}
 
 void CombatManager::setFont(const sf::Font& font) {
     m_font = font;
@@ -15,20 +13,20 @@ void CombatManager::setFont(const sf::Font& font) {
 int CombatManager::rollDiceRisk(int numDice) {
     int highest = 0;
     for (int i = 0; i < numDice; i++) {
-        int roll = (std::rand() % 6) + 1; // ทอยเต๋า 1-6
+        int roll = (std::rand() % 6) + 1;
         if (roll > highest) highest = roll;
     }
     return highest;
 }
 
-void CombatManager::initiateCombat(int atkR, int atkC, int defR, int defC, int attackerOwner, sf::Sound& diceSound) {
+void CombatManager::initiateCombat(int atkR, int atkC, int defR, int defC, int attackerOwner, sf::Sound& diceSound, bool isArmyAttack) {
     m_atkStartR = atkR;
     m_atkStartC = atkC;
     m_defTargetR = defR;
     m_defTargetC = defC;
     m_attackerOwner = attackerOwner;
+    m_isArmyAttack = isArmyAttack;
 
-    // ฝ่ายบุกทอย 3 ฝ่ายรับทอย 2 เสมอ
     m_finalAtkRoll = rollDiceRisk(3);
     m_finalDefRoll = rollDiceRisk(2);
 
@@ -42,36 +40,60 @@ void CombatManager::updateAndDraw(sf::RenderWindow& window, std::vector<Unit>& u
 
     float elapsed = m_animTimer.getElapsedTime().asSeconds();
 
-    // 1. เช็คว่าจบอนิเมชันหรือยัง (2.5 วินาที)
     if (elapsed > 2.5f) {
         m_isRolling = false;
         diceSound.stop();
         hitSound.play();
 
-        // ค้นหาตัวบุก และ ตัวรับ จากกระดาน
-        auto atkIt = units.end();
-        auto defIt = units.end();
-        for (auto it = units.begin(); it != units.end(); ++it) {
-            if (it->getR() == m_atkStartR && it->getC() == m_atkStartC && it->getOwner() == m_attackerOwner) atkIt = it;
-            if (it->getR() == m_defTargetR && it->getC() == m_defTargetC && it->getOwner() != m_attackerOwner) defIt = it;
-        }
+        auto atkIt = std::find_if(units.begin(), units.end(), [&](Unit& u) { return u.getR() == m_atkStartR && u.getC() == m_atkStartC && u.getOwner() == m_attackerOwner; });
+        auto defIt = std::find_if(units.begin(), units.end(), [&](Unit& u) { return u.getR() == m_defTargetR && u.getC() == m_defTargetC && u.getOwner() != m_attackerOwner; });
 
-        // ประมวลผลแพ้ชนะ ลบตัวละคร
         if (atkIt != units.end() && defIt != units.end()) {
             if (m_finalAtkRoll > m_finalDefRoll) {
-                atkIt->moveTo(m_defTargetR, m_defTargetC);
-                atkIt->consumeAP(1);
-                if (m_attackerOwner == 1) worldMap.revealFog(m_defTargetR, m_defTargetC, 1);
+                // ฝ่ายบุกชนะ!
                 units.erase(defIt);
+
+                bool tileEmpty = true;
+                for (auto& u : units) {
+                    if (u.getR() == m_defTargetR && u.getC() == m_defTargetC && u.getOwner() != m_attackerOwner) {
+                        tileEmpty = false; break;
+                    }
+                }
+
+                if (tileEmpty) {
+                    if (m_isArmyAttack) {
+                        for (auto& u : units) {
+                            if (u.getR() == m_atkStartR && u.getC() == m_atkStartC && u.getOwner() == m_attackerOwner) {
+                                u.moveTo(m_defTargetR, m_defTargetC); u.consumeAP(1);
+                            }
+                        }
+                    }
+                    else {
+                        auto singleAtk = std::find_if(units.begin(), units.end(), [&](Unit& u) { return u.getR() == m_atkStartR && u.getC() == m_atkStartC && u.getOwner() == m_attackerOwner; });
+                        if (singleAtk != units.end()) { singleAtk->moveTo(m_defTargetR, m_defTargetC); singleAtk->consumeAP(1); }
+                    }
+                    if (m_attackerOwner == 1) worldMap.revealFog(m_defTargetR, m_defTargetC, 1);
+                }
+                else {
+                    if (m_isArmyAttack) {
+                        for (auto& u : units) {
+                            if (u.getR() == m_atkStartR && u.getC() == m_atkStartC && u.getOwner() == m_attackerOwner) u.consumeAP(1);
+                        }
+                    }
+                    else {
+                        auto singleAtk = std::find_if(units.begin(), units.end(), [&](Unit& u) { return u.getR() == m_atkStartR && u.getC() == m_atkStartC && u.getOwner() == m_attackerOwner; });
+                        if (singleAtk != units.end()) singleAtk->consumeAP(1);
+                    }
+                }
             }
             else {
+                // ฝ่ายรับชนะ!
                 units.erase(atkIt);
             }
         }
         return;
     }
 
-    // 2. วาดฉาก UI สู้ลูกเต๋า
     if (!m_hasFont) return;
 
     sf::RectangleShape darkOverlay(sf::Vector2f(window.getSize().x, window.getSize().y));
@@ -115,12 +137,8 @@ void CombatManager::updateAndDraw(sf::RenderWindow& window, std::vector<Unit>& u
     defRollText.setFillColor(sf::Color::White);
     defRollText.setPosition(window.getSize().x * 3.0f / 4.0f, 400);
 
-    window.draw(titleText);
-    window.draw(atkSideText);
-    window.draw(atkRollText);
-    window.draw(vsText);
-    window.draw(defSideText);
-    window.draw(defRollText);
+    window.draw(titleText); window.draw(atkSideText); window.draw(atkRollText);
+    window.draw(vsText); window.draw(defSideText); window.draw(defRollText);
 
     if (elapsed >= 1.5f) {
         sf::Text resultText("", m_font, 60);

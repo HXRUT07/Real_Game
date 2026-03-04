@@ -1,16 +1,12 @@
 ﻿#include "AIManager.h"
-#include "Unit.h"          
-#include "GameMap.h"       
-#include "TurnManager.h"   
-#include "CombatManager.h" 
 #include <cmath>
 #include <iostream>
+#include <algorithm>
 
 AIManager::AIManager() {
     aiBaseR = 0; aiBaseC = 0;
     aiGold = 0; aiWood = 0; aiFood = 0;
     aiCityLevel = 1;
-    aiIsExploring = true;
 }
 
 void AIManager::initBase(int r, int c) {
@@ -25,46 +21,51 @@ int AIManager::hexDistance(int r1, int c1, int r2, int c2) {
 }
 
 bool AIManager::processTurn(std::vector<Unit>& units, GameMap& worldMap, TurnManager& turnSys, CombatManager& combatSys, sf::Sound& sndMove, sf::Sound& sndDice) {
-    // บล็อกไม่ให้ AI ขยับถ้ากำลังอยู่ในฉากทอยลูกเต๋า
     if (combatSys.isCombatActive()) return false;
 
-    // หน่วงเวลา AI 0.5 วิ
     if (aiTimer.getElapsedTime().asSeconds() > 0.5f) {
         bool aiMovedThisTick = false;
 
         int evenDir[6][2] = { {-1,-1}, {-1,0}, {0,-1}, {0,1}, {1,-1}, {1,0} };
         int oddDir[6][2] = { {-1,0}, {-1,1}, {0,-1}, {0,1}, {1,0}, {1,1} };
 
-        // 1. เช็คอัปบ้าน
-        if (aiIsExploring && aiGold >= 150 && aiWood >= 100 && aiFood >= 100) {
-            aiGold -= 150; aiWood -= 100; aiFood -= 100;
+        // อัปบ้าน
+        if (aiGold >= 100 && aiWood >= 50 && aiFood >= 50) {
+            aiGold -= 100; aiWood -= 50; aiFood -= 50;
             aiCityLevel++;
-            aiIsExploring = false;
-
-            std::cout << "\n=========================================\n";
-            std::cout << ">>> AI UPGRADED CITY! Level " << aiCityLevel << " <<<\n";
-            std::cout << ">>> AI IS NOW IN ATTACK MODE! <<<\n";
-            std::cout << "=========================================\n\n";
-
-            units.emplace_back("Enemy_Lv2", aiBaseR, aiBaseC, 2);
+            units.emplace_back("Enemy_Lv" + std::to_string(aiCityLevel), aiBaseR, aiBaseC, 2);
         }
 
         for (size_t i = 0; i < units.size(); ++i) {
             if (units[i].getOwner() == 2 && units[i].getCurrentAP() > 0) {
 
-                // --- ระบบเก็บเกี่ยว ---
+                // ฟาร์ม
                 HexTile* currentTile = worldMap.getTile(units[i].getR(), units[i].getC());
                 if (currentTile && (currentTile->gold > 0 || currentTile->wood > 0 || currentTile->food > 0)) {
-                    aiGold += currentTile->gold;
-                    aiWood += currentTile->wood;
-                    aiFood += currentTile->food;
+                    aiGold += currentTile->gold; aiWood += currentTile->wood; aiFood += currentTile->food;
                     currentTile->gold = 0; currentTile->wood = 0; currentTile->food = 0;
                 }
 
-                int targetR = -1, targetC = -1, minDist = 999999;
+                int targetR = -1, targetC = -1;
+                int minDist = 999999;
+                bool enemyInSight = false;
 
-                // ฟาร์มของ
-                if (aiIsExploring) {
+                // หาศัตรู (สายตา 5)
+                for (auto& enemy : units) {
+                    if (enemy.getOwner() == 1) {
+                        int dist = hexDistance(units[i].getR(), units[i].getC(), enemy.getR(), enemy.getC());
+                        if (dist <= 5) {
+                            if (dist < minDist) {
+                                minDist = dist; targetR = enemy.getR(); targetC = enemy.getC();
+                                enemyInSight = true;
+                            }
+                        }
+                    }
+                }
+
+                // หาของ
+                if (!enemyInSight) {
+                    minDist = 999999;
                     for (int r = 0; r < 50; r++) {
                         for (int c = 0; c < 50; c++) {
                             HexTile* t = worldMap.getTile(r, c);
@@ -76,20 +77,9 @@ bool AIManager::processTurn(std::vector<Unit>& units, GameMap& worldMap, TurnMan
                     }
                 }
 
-                // โหมดนักล่า
-                if (!aiIsExploring || targetR == -1) {
-                    for (auto& enemy : units) {
-                        if (enemy.getOwner() == 1) {
-                            int dist = hexDistance(units[i].getR(), units[i].getC(), enemy.getR(), enemy.getC());
-                            if (dist < minDist) { minDist = dist; targetR = enemy.getR(); targetC = enemy.getC(); }
-                        }
-                    }
-                }
-
                 if (targetR == -1) {
-                    units[i].consumeAP(units[i].getCurrentAP());
-                    aiMovedThisTick = true;
-                    break;
+                    targetR = std::max(0, std::min(49, aiBaseR + (std::rand() % 11 - 5)));
+                    targetC = std::max(0, std::min(49, aiBaseC + (std::rand() % 11 - 5)));
                 }
 
                 int bestR = units[i].getR(), bestC = units[i].getC();
@@ -107,17 +97,10 @@ bool AIManager::processTurn(std::vector<Unit>& units, GameMap& worldMap, TurnMan
                 }
 
                 if (bestR != units[i].getR() || bestC != units[i].getC()) {
-                    auto playerIt = units.end();
-                    for (auto it = units.begin(); it != units.end(); ++it) {
-                        if (it->getR() == bestR && it->getC() == bestC && it->getOwner() == 1) {
-                            playerIt = it;
-                            break;
-                        }
-                    }
-
+                    auto playerIt = std::find_if(units.begin(), units.end(), [&](Unit& u) { return u.getR() == bestR && u.getC() == bestC && u.getOwner() == 1; });
                     if (playerIt != units.end()) {
-                        // AI โจมตี Player
-                        combatSys.initiateCombat(units[i].getR(), units[i].getC(), bestR, bestC, 2, sndDice);
+                        // AI โจมตี (isArmyAttack = true)
+                        combatSys.initiateCombat(units[i].getR(), units[i].getC(), bestR, bestC, 2, sndDice, true);
                     }
                     else {
                         units[i].moveTo(bestR, bestC);
@@ -136,7 +119,7 @@ bool AIManager::processTurn(std::vector<Unit>& units, GameMap& worldMap, TurnMan
 
         if (!aiMovedThisTick) {
             turnSys.endTurn(units);
-            return true; // บอก main ว่าเทิร์นจบแล้ว
+            return true;
         }
 
         aiTimer.restart();
