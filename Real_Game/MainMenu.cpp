@@ -12,7 +12,7 @@ namespace Pal {
     const sf::Color BtnHover{ 255,255,255,255 };
     const sf::Color SepColor{ 160,145,115, 80 };
     const sf::Color BgFallback{ 40, 32, 22,255 };
-    const sf::Color Gold{ 200,165, 60,255 };
+    const sf::Color Gold{ 255, 215, 80, 255 };  // ทองสว่างขึ้น
     const sf::Color GoldDim{ 140,110, 40,180 };
     const sf::Color TrackBg{ 50, 42, 30,255 };
     const sf::Color TrackFill{ 180,145, 55,255 };
@@ -251,8 +251,9 @@ void MainMenu::buildSettingsUI() {
         item.fillBar.setPosition(cx - trackW / 2.f, rowCy + m_H * 0.048f);
         item.fillBar.setFillColor(Pal::TrackFill);
 
-        float bxL = cx - trackW / 2.f - btnSz - m_W * 0.012f;
-        float bxR = cx + trackW / 2.f + m_W * 0.012f;
+        float gap = m_W * 0.012f;              // ช่องว่างระหว่างปุ่มกับ track
+        float bxL = cx - trackW / 2.f - gap - btnSz / 2.f;
+        float bxR = cx + trackW / 2.f + gap + btnSz / 2.f;
         float bcy = rowCy + m_H * 0.048f;
 
         item.btnLeft.setSize({ btnSz,btnSz });
@@ -284,7 +285,7 @@ void MainMenu::buildSettingsUI() {
         item.valueText.setFont(m_font);
         item.valueText.setString(std::to_string(item.value));
         item.valueText.setCharacterSize(static_cast<unsigned>(m_H * 0.026f));
-        item.valueText.setFillColor(Pal::Gold);
+        item.valueText.setFillColor(sf::Color(255, 255, 255, 255)); // ขาวสว่าง
         centerText(item.valueText, cx, rowCy + m_H * 0.048f);
 
         m_settingItems.push_back(std::move(item));

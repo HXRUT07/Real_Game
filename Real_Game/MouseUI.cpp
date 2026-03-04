@@ -76,6 +76,8 @@ MouseUI::MouseUI() {
     }
 }
 
+
+
 void MouseUI::showResourcePanel(float windowWidth, int gold, int wood, int food) {
     isPanelVisible = true;
     m_showSidePanel = false;
@@ -171,10 +173,59 @@ void MouseUI::draw(sf::RenderWindow& window) {
 
     window.draw(turnCounterText);
 
-    endTurnBtn.setPosition(screenW - 190.f, screenH - 80.f);
-    endTurnText.setPosition(screenW - 165.f, screenH - 70.f);
-    window.draw(endTurnBtn);
-    window.draw(endTurnText);
+    {
+        float cx = screenW - 70.f;
+        float cy = screenH - 80.f;
+        float R = 46.f;
+
+        bool isP1 = (endTurnBtn.getFillColor() != sf::Color(80, 80, 80));
+        sf::Color cRim = isP1 ? sf::Color(200, 165, 55, 220) : sf::Color(100, 100, 100, 180);
+        sf::Color cBody = isP1 ? sf::Color(40, 32, 20, 235) : sf::Color(60, 60, 60, 220);
+        sf::Color cCore = isP1 ? sf::Color(25, 20, 12, 225) : sf::Color(40, 40, 40, 210);
+
+        sf::CircleShape rim(R);
+        rim.setOrigin(R, R); rim.setPosition(cx, cy);
+        rim.setFillColor(cRim);
+        window.draw(rim);
+
+        sf::CircleShape body(R * 0.84f);
+        body.setOrigin(R * 0.84f, R * 0.84f); body.setPosition(cx, cy);
+        body.setFillColor(cBody);
+        window.draw(body);
+
+        sf::CircleShape ring(R * 0.84f);
+        ring.setOrigin(R * 0.84f, R * 0.84f); ring.setPosition(cx, cy);
+        ring.setFillColor(sf::Color::Transparent);
+        ring.setOutlineThickness(1.5f);
+        ring.setOutlineColor(sf::Color(180, 145, 50, 160));
+        window.draw(ring);
+
+        sf::CircleShape core(R * 0.60f);
+        core.setOrigin(R * 0.60f, R * 0.60f); core.setPosition(cx, cy);
+        core.setFillColor(cCore);
+        core.setOutlineThickness(1.f);
+        core.setOutlineColor(cRim);
+        window.draw(core);
+
+        sf::Text icon(">", font, (unsigned)(R * 0.60f * 0.9f));
+        icon.setFillColor(cRim); icon.setStyle(sf::Text::Bold);
+        sf::FloatRect ib = icon.getLocalBounds();
+        icon.setOrigin(ib.left + ib.width / 2.f, ib.top + ib.height / 2.f);
+        icon.setPosition(cx, cy - R * 0.60f * 0.05f);
+        window.draw(icon);
+
+        sf::Text lbl(isP1 ? "END TURN" : "AI TURN", font, (unsigned)(R * 0.34f));
+        lbl.setFillColor(isP1 ? sf::Color(230, 210, 160, 255) : sf::Color(130, 130, 130, 255));
+        lbl.setStyle(sf::Text::Bold); lbl.setLetterSpacing(1.5f);
+        sf::FloatRect lb = lbl.getLocalBounds();
+        lbl.setOrigin(lb.left + lb.width / 2.f, lb.top);
+        lbl.setPosition(cx, cy + R + 6.f);
+        window.draw(lbl);
+
+        // อัปเดต bounds สำหรับ click detection (ใช้แทน endTurnBtn เดิม)
+        endTurnBtn.setPosition(cx - R, cy - R);
+        endTurnBtn.setSize({ R * 2,R * 2 });
+    }
 
     // เปรมทำ - วาด resource bar มุมขวาบน
     float iconSize = 40.f;
