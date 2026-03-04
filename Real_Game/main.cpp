@@ -338,7 +338,6 @@ int main() {
                         gui.clearSelection(); leadUnit = nullptr; currentStack.clear(); worldMap.clearHighlight();
                         activeCityUI = nullptr;
                         aiTimer.restart();
-
                         std::cout << ">>> Switched to AI (Player 2) <<<" << std::endl;
                     }
                 }
