@@ -1,10 +1,12 @@
 ﻿#include <SFML/Graphics.hpp>
+#include <SFML/Audio.hpp> 
 #include <vector>
 #include <cmath>
 #include <cstdlib> // <--- เพิ่มตัวนี้สำหรับ rand()
 #include <ctime>   // <--- เพิ่มตัวนี้สำหรับ time()
 #include <iostream> // <--- เพิ่มสำหรับ cout
 #include <string>   // <--- เพิ่มสำหรับ string
+#include <algorithm> 
 
 #include "GameMap.h"     // <--- Game map system (Yu)
 #include "MouseUI.h"     // <--- USER INTERFACE MOUSE (PLAY)
@@ -13,40 +15,50 @@
 #include "ResourceManage.h" // <--- เพิ่ม Header ของระบบทรัพยากร
 #include "TurnManager.h" // <--- ระบบเทิร์น
 #include "MainMenu.h" //<--- ระบบเมนูหลัก
+#include "CombatManager.h" 
+#include "AIManager.h"
 
 int main() {
-    // ตั้งค่า Seed สำหรับการสุ่ม (ใส่ใน Main ทีเดียวจบ)
     std::srand(static_cast<unsigned>(std::time(nullptr)));
 
-    // กำหนดค่าการลบรอยหยัก (Antialiasing) เพื่อให้ขอบหกเหลี่ยมคมชัดขึ้น (PLAY)
     sf::ContextSettings settings;
     settings.antialiasingLevel = 8;
 
     sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Hexa-Conquest", sf::Style::Fullscreen, settings);
-
-    // จำกัดเฟรมเรตหน่อย เครื่องจะได้ไม่ทำงานหนักเกินไปตอน Fullscreen
     window.setFramerateLimit(60);
+
+    // โหลดฟอนต์
+    sf::Font combatFont;
+    bool hasCombatFont = combatFont.loadFromFile("Roboto-VariableFont_wdth,wght.ttf");
+    if (!hasCombatFont) hasCombatFont = combatFont.loadFromFile("arial.ttf");
+    if (!hasCombatFont) hasCombatFont = combatFont.loadFromFile("assets/fonts/Trajan Pro Regular.ttf");
+
+    // โหลดเสียง
+    sf::SoundBuffer bufMove, bufDice, bufHit, bufClick;
+    bufMove.loadFromFile("assets/sounds/move.wav");
+    bufDice.loadFromFile("assets/sounds/dice.wav");
+    bufHit.loadFromFile("assets/sounds/hit.wav");
+    bufClick.loadFromFile("assets/sounds/click.wav");
+
+    sf::Sound sndMove(bufMove);
+    sf::Sound sndDice(bufDice); sndDice.setLoop(true);
+    sf::Sound sndHit(bufHit);
+    sf::Sound sndClick(bufClick);
 
     // ----Main Menu----//(PLAY)
     {
-        MainMenu menu(window,
-            "assets/background.png",
-            "assets/fonts/Trajan Pro Regular.ttf");
-        menu.loadVideoFrames("assets/frames", 240);  // <-- เพิ่มบรรทัดนี้
+        MainMenu menu(window, "assets/background.png", "assets/fonts/Trajan Pro Regular.ttf");
+        menu.loadVideoFrames("assets/frames", 240);
         sf::Clock menuClock;
 
         while (window.isOpen()) {
             float dt = menuClock.restart().asSeconds();
-
             sf::Event event;
             while (window.pollEvent(event)) {
-                if (event.type == sf::Event::Closed)
-                    window.close();
+                if (event.type == sf::Event::Closed) window.close();
                 menu.handleEvent(event);
             }
-
             menu.update(dt);
-
             if (menu.getState() == MenuState::Play)  break;
             if (menu.getState() == MenuState::Exit) { window.close(); break; }
 
@@ -56,82 +68,61 @@ int main() {
         }
     }
 
-    //----Map system----//(Yu)
-    // 1. สร้าง Map แค่บรรทัดเดียว!
     GameMap worldMap(50, 50);
-
-    // 2. สร้าง Object กล้อง
     GameCamera camera(window.getSize().x, window.getSize().y);
-
-    MouseUI gui; //(PLAY)
-
-    //----Unit System----//
-    std::vector<Unit> units;       // เก็บยูนิตทั้งหมด
-
-    // จองพื้นที่ล่วงหน้า 1,000 ตัว ป้องกันบัค C++ ย้ายที่อยู่หน่วยความจำ (Memory Dangling)
+    MouseUI gui;
+    std::vector<Unit> units;
     units.reserve(1000);
 
-    Unit* selectedUnit = nullptr;  // ตัวที่กำลังเลือกอยู่
-    bool isGameRunning = false;    // ตัวแปรเช็คว่าจบช่วงเลือกจุดเกิดหรือยัง
-    int unitNameCounter = 1;       // ตัวนับสำหรับตั้งชื่อ Unit อัตโนมัติ
-    TurnManager turnSys(2); // สร้างระบบเทิร์นสำหรับ 2 ผู้เล่น
+    Unit* selectedUnit = nullptr;
+    bool isGameRunning = false;
+    int unitNameCounter = 1;
+    TurnManager turnSys(2);
 
-    // --- ตัวแปรเก็บจำนวนเทิร์นที่ผ่านไป ---
     int currentTurnNumber = 1;
+
+    // ---  เรียกใช้ Class ที่เราแยกไปเขียน ---
+    CombatManager combatSys;
+    if (hasCombatFont) combatSys.setFont(combatFont);
+    AIManager aiSys;
 
     while (window.isOpen()) {
 
         sf::Vector2f mousePosScreen = window.mapPixelToCoords(sf::Mouse::getPosition(window));
         sf::Event event;
 
-        // [จุดแก้ไข] ลูป pollEvent จะจบแค่ตรงที่เช็คปุ่ม/เมาส์ เท่านั้น
         while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed)
-                window.close();
+            if (event.type == sf::Event::Closed) window.close();
+            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) window.close();
 
-            // กด Escape เพื่อออกจากเกมได้ (สำคัญมากตอนเทส Fullscreen ไม่งั้นออกยาก)
-            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)
-                window.close();
+            // ล็อกกล้องตอนทอยเต๋า
+            if (!combatSys.isCombatActive()) {
+                camera.handleEvent(event, window);
+            }
 
-            // 3. ส่ง Event ให้กล้องจัดการ (คลิก/ปล่อย/หมุนล้อ)
-            camera.handleEvent(event, window);
-
-            // -----------------------------------------------------------------------
-            // ส่วนตรวจสอบการคลิกซ้าย: เลือกจุดเกิด (Spawn) และ ควบคุมยูนิต (Gameplay)
-            // -----------------------------------------------------------------------
-            // อนุญาตให้ผู้เล่นคลิกเมาส์สั่งการได้ เฉพาะตอนเป็นตาของ Player 1 เท่านั้น
-            if (event.type == sf::Event::MouseButtonPressed && turnSys.getCurrentPlayer() == 1) {
+            // ระบบคลิกเมาส์
+            if (event.type == sf::Event::MouseButtonPressed && turnSys.getCurrentPlayer() == 1 && !combatSys.isCombatActive()) {
                 sf::Vector2i pixelPos = sf::Mouse::getPosition(window);
                 sf::Vector2f worldPos = window.mapPixelToCoords(pixelPos, camera.getView());
-                sf::Vector2f uiPos = window.mapPixelToCoords(pixelPos, window.getDefaultView()); // ตำแหน่งสำหรับ UI
+                sf::Vector2f uiPos = window.mapPixelToCoords(pixelPos, window.getDefaultView());
 
                 if (event.mouseButton.button == sf::Mouse::Right) {
-                    // 1. ยกเลิกการเลือกทหารและไฮไลท์
                     gui.clearSelection();
                     selectedUnit = nullptr;
                     worldMap.clearHighlight();
 
-                    // 2. ดึงข้อมูลทรัพยากรจากช่องที่คลิก
                     int r = 0, c = 0;
                     if (worldMap.getGridCoords(worldPos, r, c)) {
-
-                        // --- [อัปเดตระบบใหม่] เช็คก่อนว่ามีเมืองอยู่ตรงนี้ไหม ---
                         City* clickedCity = worldMap.getCityAt(r, c);
                         if (clickedCity != nullptr) {
-                            // ถ้ามีเมือง ให้โชว์หน้าต่างคลังหลวงของเมือง (CITY STOCKPILE)
                             gui.showCityResourcePanel((float)window.getSize().x, clickedCity->getGold(), clickedCity->getWood(), clickedCity->getFood());
                         }
                         else {
-                            // ถ้าไม่มีเมือง ค่อยไปดึงข้อมูลทรัพยากรบนพื้นดินปกติ
                             HexTile* clickedTile = worldMap.getTile(r, c);
-
-                            // กฎ: ต้องมีช่องนี้อยู่จริง และ "ต้องเคยสำรวจแล้ว (isExplored)" เท่านั้น
                             if (clickedTile != nullptr && clickedTile->isExplored) {
-                                // โชว์ข้อมูลทรัพยากรของช่องนั้น
                                 gui.showResourcePanel((float)window.getSize().x, clickedTile->gold, clickedTile->wood, clickedTile->food);
                             }
                             else {
-                                // ถ้าคลิกขวาใส่หมอกดำๆ ให้ปิดหน้าต่างทิ้ง
                                 gui.hideInfo();
                             }
                         }
@@ -139,275 +130,177 @@ int main() {
                 }
                 else if (event.mouseButton.button == sf::Mouse::Left) {
 
-                    // ---  เช็คก่อนเลยว่าคลิกโดนปุ่ม "END TURN" หรือเปล่า? ---
                     if (gui.isEndTurnButtonClicked(uiPos) && isGameRunning) {
+                        sndClick.play();
                         turnSys.endTurn(units);
                         gui.clearSelection();
                         selectedUnit = nullptr;
                         worldMap.clearHighlight();
                         std::cout << ">>> Switched to AI (Player 2) <<<" << std::endl;
-                        continue; // ข้ามการทำงานด้านล่างไปเลย เพราะคลิกปุ่มไปแล้ว
+                        continue;
                     }
 
-                    // คลิกซ้าย: ซ่อน Info Panel เดิมก่อน
                     gui.hideInfo();
 
-                    // --- PHASE 1: เลือกจุดเกิด ---
                     if (!isGameRunning) {
-                        // 3. ส่งให้ GameMap จัดการเลือกจุดเกิด
                         worldMap.handleMouseClick(worldPos);
-
-                        // เช็คว่า Map เริ่มเกมสำเร็จหรือยัง?
                         if (worldMap.isGameStarted()) {
                             isGameRunning = true;
-
-                            // *** Spawn ทหารตัวแรกตรงจุดที่คลิก ***
                             int spawnR = 0, spawnC = 0;
                             if (worldMap.getGridCoords(worldPos, spawnR, spawnC)) {
-                                //  ใส่เลข 1 ด้านหลังเพื่อให้ตัวนี้เป็นของ Player 1 และสร้างศัตรู Player 2
+                                sndMove.play();
                                 units.emplace_back("Commander", spawnR, spawnC, 1);
 
-                                // ดันให้ศัตรูไปเกิดไกลๆ เลย (บวก 8 ช่อง)
-                                units.emplace_back("Enemy", spawnR + 8, spawnC + 8, 2);
+                                // สุ่มหาจุดเกิดให้ AI ให้ไกล 15-30 ช่อง
+                                int enemyR = spawnR, enemyC = spawnC;
+                                auto hexDist = [](int r1, int c1, int r2, int c2) {
+                                    int ac1 = c1 - (r1 - (r1 & 1)) / 2; int ac2 = c2 - (r2 - (r2 & 1)) / 2;
+                                    return (std::abs(r1 - r2) + std::abs(ac1 - ac2) + std::abs((r1 - r2) + (ac1 - ac2))) / 2;
+                                    };
 
-                                std::cout << "City Founded and Commander Spawned at " << spawnR << "," << spawnC << std::endl;
+                                int attempts = 0;
+                                while (attempts < 1000) {
+                                    int r = 5 + std::rand() % 40; int c = 5 + std::rand() % 40;
+                                    if (hexDist(spawnR, spawnC, r, c) >= 15 && hexDist(spawnR, spawnC, r, c) <= 30) {
+                                        enemyR = r; enemyC = c; break;
+                                    }
+                                    attempts++;
+                                }
+                                if (attempts >= 1000) { enemyR = std::min(44, spawnR + 15); enemyC = std::min(44, spawnC + 15); }
+
+                                aiSys.initBase(enemyR, enemyC); // ส่งตำแหน่งไปให้ AI Manager
+                                units.emplace_back("Enemy", enemyR, enemyC, 2);
                             }
                         }
                     }
-                    // --- PHASE 2: ควบคุมทหาร (Gameplay) ---
                     else {
                         int r = 0, c = 0;
                         if (worldMap.getGridCoords(worldPos, r, c)) {
-
                             HexTile* clickedTile = worldMap.getTile(r, c);
 
                             if (clickedTile == nullptr || !clickedTile->isVisible) {
-                                gui.clearSelection();
-                                selectedUnit = nullptr;
-                                worldMap.clearHighlight();
+                                gui.clearSelection(); selectedUnit = nullptr; worldMap.clearHighlight();
                             }
                             else {
-                                // 1. หา Unit ทั้งหมดที่อยู่ในช่องนี้ (Stacking)
                                 std::vector<Unit*> stackInTile;
+                                bool hasOurUnit = false;
                                 for (auto& u : units) {
                                     if (u.getR() == r && u.getC() == c) {
                                         stackInTile.push_back(&u);
+                                        if (u.getOwner() == turnSys.getCurrentPlayer()) hasOurUnit = true;
                                     }
                                 }
 
-                                // กรณี A: คลิกโดนช่องที่มี Unit (เลือก Unit)
-                                if (!stackInTile.empty()) {
-                                    gui.setSelectionList(stackInTile);
+                                if (selectedUnit != nullptr && worldMap.isValidMove(r, c)) {
+                                    auto enemyIt = std::find_if(units.begin(), units.end(), [&](Unit& u) { return u.getR() == r && u.getC() == c && u.getOwner() != turnSys.getCurrentPlayer(); });
 
-                                    selectedUnit = nullptr;
-                                    for (auto* u : stackInTile) {
-                                        // กฎ: ต้องมี AP และ "ต้องเป็นของ Player ปัจจุบันเท่านั้น!"
-                                        if (u->hasAP() && u->getOwner() == turnSys.getCurrentPlayer()) {
-                                            selectedUnit = u;
-                                            break;
-                                        }
-                                    }
-
-                                    if (selectedUnit) {
-                                        worldMap.calculateValidMoves(selectedUnit->getR(), selectedUnit->getC(), selectedUnit->getMoveRange());
-                                        std::cout << "Unit Selected: " << selectedUnit->getName() << std::endl;
-                                    }
-                                    else {
+                                    if (enemyIt != units.end()) {
+                                        // เราสั่งโจมตี ส่งต่อให้ CombatManager จัดการ!
+                                        combatSys.initiateCombat(selectedUnit->getR(), selectedUnit->getC(), r, c, 1, sndDice);
+                                        gui.clearSelection();
                                         worldMap.clearHighlight();
-                                        std::cout << "All units in this stack have no AP or not your turn." << std::endl;
-                                    }
-                                }
-                                // กรณี B: คลิกพื้นที่ว่าง และมี Unit ถูกเลือกอยู่ (สั่งเดิน)
-                                else if (selectedUnit != nullptr) {
-                                    if (worldMap.isValidMove(r, c)) {
-                                        // 1. ย้ายตำแหน่ง
-                                        selectedUnit->moveTo(r, c);
-                                        // 2. หัก AP
-                                        selectedUnit->consumeAP(1);
-                                        // 3. เปิดหมอก (ระยะ 1 ช่อง)
-                                        worldMap.revealFog(r, c, 1);
-
-                                        worldMap.clearHighlight();
-                                        gui.clearSelection(); // ปิดแถบขวา
                                         selectedUnit = nullptr;
-                                        std::cout << "Unit Moved!" << std::endl;
                                     }
                                     else {
+                                        selectedUnit->moveTo(r, c);
+                                        selectedUnit->consumeAP(1);
+                                        worldMap.revealFog(r, c, 1);
+                                        sndMove.play();
+
+                                        worldMap.clearHighlight();
                                         gui.clearSelection();
                                         selectedUnit = nullptr;
-                                        worldMap.clearHighlight();
-                                        std::cout << "Cannot move! (Blocked or unseen)" << std::endl;
                                     }
                                 }
-                                // กรณี C: คลิกพื้นที่ว่างเปล่า โดยไม่มี Unit ถูกเลือก
-                                else {
-                                    gui.clearSelection();
+                                else if (!stackInTile.empty() && hasOurUnit) {
+                                    gui.setSelectionList(stackInTile);
                                     selectedUnit = nullptr;
-                                    worldMap.clearHighlight();
+                                    for (auto* u : stackInTile) {
+                                        if (u->hasAP() && u->getOwner() == turnSys.getCurrentPlayer()) { selectedUnit = u; break; }
+                                    }
+                                    if (selectedUnit) worldMap.calculateValidMoves(selectedUnit->getR(), selectedUnit->getC(), selectedUnit->getMoveRange());
+                                    else worldMap.clearHighlight();
+                                }
+                                else {
+                                    gui.clearSelection(); selectedUnit = nullptr; worldMap.clearHighlight();
                                 }
                             }
                         }
                     }
                 }
             }
-            // -----------------------------------------------------------------------
 
-            // [DEBUG / TEST] Key Controls
-            if (event.type == sf::Event::KeyPressed) {
-                // R: รีเซ็ต AP ของทุก Unit (จำลองการจบ Turn)
+            if (event.type == sf::Event::KeyPressed && !combatSys.isCombatActive()) {
                 if (event.key.code == sf::Keyboard::R) {
                     for (auto& u : units) u.resetAP();
-                    std::cout << "Next Turn: All AP Reset" << std::endl;
                 }
             }
 
-            //  ใช้ KeyReleased (ปล่อยนิ้ว) และแก้จาก Enter เป็น Return
-            if (event.type == sf::Event::KeyReleased) {
-                if (event.key.code == sf::Keyboard::Return && isGameRunning) { // <--- ลบ NumpadEnter ออกแล้ว
-                    // กดจบเทิร์นได้เฉพาะตอนที่เป็นตาของเราเท่านั้น
+            if (event.type == sf::Event::KeyReleased && !combatSys.isCombatActive()) {
+                if (event.key.code == sf::Keyboard::Return && isGameRunning) {
                     if (turnSys.getCurrentPlayer() == 1) {
-                        turnSys.endTurn(units); // เรียกสลับเทิร์นและรีเซ็ต AP
-
-                        // เคลียร์ UI ที่เลือกค้างไว้
-                        gui.clearSelection();
-                        selectedUnit = nullptr;
-                        worldMap.clearHighlight();
-
+                        sndClick.play();
+                        turnSys.endTurn(units);
+                        gui.clearSelection(); selectedUnit = nullptr; worldMap.clearHighlight();
                         std::cout << ">>> Switched to AI (Player 2) <<<" << std::endl;
                     }
                 }
             }
-        } // <---  วงเล็บปิดของ while(window.pollEvent) ย้ายมาอยู่ตรงนี้
+        }
 
         // -----------------------------------------------------------------------
-        // ระบบสมอง AI (จะทำงานทันทีเมื่อเป็นตาของ Player 2)
+        // อัปเดตสมอง AI (ถ้าจบเทิร์น AIManager จะคืนค่า True)
         // -----------------------------------------------------------------------
         if (isGameRunning && turnSys.getCurrentPlayer() == 2) {
-            std::cout << "AI is processing..." << std::endl;
-
-            // ตอนนี้เราให้ AI ข้ามเทิร์นตัวเองไปก่อน 
-            for (auto& u : units) {
-                if (u.getOwner() == 2) {
-                    u.consumeAP(u.getCurrentAP()); // สั่งให้ศัตรูใช้ AP จนหมด
-                }
+            if (aiSys.processTurn(units, worldMap, turnSys, combatSys, sndMove, sndDice)) {
+                currentTurnNumber++;
+                std::cout << ">>> Switched to Player 1 <<<" << std::endl;
             }
-
-            // AI จบเทิร์น โยนกลับให้ผู้เล่น 1 ทันที
-            turnSys.endTurn(units);
-
-            // ---  วนกลับมาตาเราปุ๊บ ก็นับเป็นเทิร์นใหม่ทันที ---
-            currentTurnNumber++;
-
-            std::cout << ">>> Switched to Player 1 <<<" << std::endl;
         }
 
-        // 4. อัปเดตกล้อง (คำนวณการเลื่อน)
-        camera.update(window);
-
-        // 5. นำ View จากกล้องมาใส่ window ก่อนจะทำอย่างอื่น
+        if (!combatSys.isCombatActive()) camera.update(window);
         window.setView(camera.getView());
 
-        // --- Logic การตรวจสอบ Highlight ---
-        // จุดสำคัญ: ต้องส่ง view ของ camera เข้าไปใน mapPixelToCoords ด้วย
-        sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window), camera.getView());
+        if (!combatSys.isCombatActive()) {
+            sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window), camera.getView());
+            worldMap.updateHighlight(mousePos);
+        }
 
-        // เราจะส่ง mousePos ไปให้ worldMap ตรวจสอบว่าชี้ที่ช่องไหน
-        worldMap.updateHighlight(mousePos);
-
-        // อัปเดต UI
-        // gui.update(mousePosScreen); 
-
-        window.clear(sf::Color(20, 20, 30)); // พื้นหลังสีน้ำเงินเข้มๆ เหมือนอวกาศ
-
-        // สั่งวาด Map แค่บรรทัดเดียว!
-        window.setView(camera.getView()); // ใช้ View กล้องวาดแมพ
+        window.clear(sf::Color(20, 20, 30));
+        window.setView(camera.getView());
         worldMap.draw(window);
 
-        // -----------------------------------------------------------------------
-        //  ระบบพรางตาศัตรู (วาดเฉพาะตัวที่อยู่ในระยะมองเห็น)
-        // -----------------------------------------------------------------------
-        for (auto& unit : units) {
-            if (unit.getOwner() == 1) {
-                // ตัวเรา (Player 1) วาดเสมอ
-                unit.draw(window);
-            }
-            else {
-                // ศัตรู (Player 2) เช็คให้ชัวร์ว่าช่องนั้นสว่างอยู่จริงๆ
-                HexTile* tile = worldMap.getTile(unit.getR(), unit.getC());
-                if (tile != nullptr && tile->isVisible) {
-                    unit.draw(window); // วาดก็ต่อเมื่ออยู่ในไฟสว่าง (isVisible)
+        // ไฮไลท์เป้าหมายสีแดง
+        if (selectedUnit != nullptr && turnSys.getCurrentPlayer() == 1) {
+            for (auto& u : units) {
+                if (u.getOwner() == 2 && worldMap.isValidMove(u.getR(), u.getC())) {
+                    HexTile* enemyTile = worldMap.getTile(u.getR(), u.getC());
+                    if (enemyTile) {
+                        sf::ConvexShape redHex = enemyTile->shape;
+                        redHex.setFillColor(sf::Color(255, 0, 0, 150));
+                        redHex.setOutlineColor(sf::Color::Red);
+                        redHex.setOutlineThickness(3.0f);
+                        window.draw(redHex);
+                    }
                 }
             }
         }
+
+        for (auto& unit : units) unit.draw(window);
         worldMap.drawCities(window);
 
-        // --- ส่งข้อมูลให้ UI อัปเดตเลขเทิร์นก่อนวาด ---
+        window.setView(window.getDefaultView());
         gui.updateTurnInfo(turnSys.getCurrentPlayer(), currentTurnNumber);
 
-        // เปรมทำ - ส่งข้อมูลทรัพยากรของเมืองไปแสดงมุมขวาบน
         City* myCity = worldMap.getFirstCity();
         if (myCity) gui.updateResourceBar(myCity->getWood(), myCity->getGold(), myCity->getFood());
-        // เปรมทำ - จบ
-
-        window.setView(window.getDefaultView()); // คืนค่า View ปกติเพื่อวาด UI ทับข้างบนสุด
         gui.draw(window);
 
-        window.display();
-    } // <---  วงเล็บปิดของ while(window.isOpen())
-
-    return 0; // <---  ย้าย return 0 มาไว้จุดล่างสุดนอกลูป
-
-    // =========================================================================
-    // โค้ดด้านล่างนี้ถูกเก็บรักษาไว้ 100% ตามคำขอครับ 
-    // (ใส่ #if 0 ครอบไว้เพื่อไม่ให้คอมพิวเตอร์งงตอนรันโปรแกรมครับ)
-    // =========================================================================
-#if 0
-    //panel
-
-    GameMap gameMap(10, 10);
-
-    sf::Font font;
-    font.loadFromFile("arial.ttf");
-
-    sf::RectangleShape panel;
-    panel.setSize(sf::Vector2f(300, 600));
-    panel.setFillColor(sf::Color(40, 40, 40));
-    panel.setPosition(850, 50);
-
-    sf::Text panelText;
-    panelText.setFont(font);
-    panelText.setCharacterSize(18);
-    panelText.setFillColor(sf::Color::White);
-    panelText.setPosition(870, 70);
-
-    while (window.isOpen())
-    {
-        sf::Event event;
-        while (window.pollEvent(event))
-        {
-            if (event.type == sf::Event::Closed)
-                window.close();
-
-            if (event.type == sf::Event::MouseButtonPressed) {
-                sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
-                gameMap.handleMouseClick(mousePos);
-            }
-        }
-
-        window.clear();
-
-        gameMap.draw(window);
-
-        City* city = gameMap.getSelectedCity();
-        if (city != nullptr) {
-            window.draw(panel);
-            panelText.setString(city->getCityInfo());
-            window.draw(panelText);
-        }
+        // --- อัปเดตและวาดฉากลูกเต๋าของ CombatManager ทับล่างสุด ---
+        combatSys.updateAndDraw(window, units, worldMap, sndDice, sndHit);
 
         window.display();
     }
-#endif
-}
 
-// ไม่ต้องเอาคอมเมนต์ออก
+    return 0;
+}
