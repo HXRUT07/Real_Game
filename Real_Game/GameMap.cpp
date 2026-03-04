@@ -9,10 +9,7 @@
 
 const float PI = 3.14159265f;
 
-struct Node {
-    int r, c;
-    int cost;
-};
+struct Node { int r, c, cost; };
 
 GameMap::GameMap(int r, int c) {
     this->rows = r;
@@ -47,9 +44,7 @@ GameMap::GameMap(int r, int c) {
 HexTile* GameMap::getTile(int r, int c) {
     if (r >= 0 && r < rows && c >= 0 && c < cols) {
         int index = r * cols + c;
-        if (index >= 0 && index < tiles.size()) {
-            return &tiles[index];
-        }
+        if (index >= 0 && index < tiles.size()) return &tiles[index];
     }
     return nullptr;
 }
@@ -62,7 +57,6 @@ bool GameMap::getGridCoords(sf::Vector2f mousePos, int& outR, int& outC) {
         sf::FloatRect bounds = tile.shape.getGlobalBounds();
         float centerX = bounds.left + bounds.width / 2.0f;
         float centerY = bounds.top + bounds.height / 2.0f;
-
         float dx = mousePos.x - centerX;
         float dy = mousePos.y - centerY;
         float dist = std::sqrt(dx * dx + dy * dy);
@@ -84,9 +78,7 @@ bool GameMap::getGridCoords(sf::Vector2f mousePos, int& outR, int& outC) {
 void GameMap::handleMouseClick(sf::Vector2f mousePos) {
     if (!m_gameStarted) {
         int r, c;
-        if (getGridCoords(mousePos, r, c)) {
-            startGame(r, c);
-        }
+        if (getGridCoords(mousePos, r, c)) startGame(r, c);
     }
 }
 
@@ -100,10 +92,7 @@ void GameMap::startGame(int spawnR, int spawnC) {
     sf::FloatRect bounds = tiles[idx].shape.getGlobalBounds();
     sf::Vector2f center(bounds.left + bounds.width / 2.f, bounds.top + bounds.height / 2.f);
 
-    // สร้าง City (สี่เหลี่ยมฐาน)
-// เปรมทำ - ใช้ make_unique แทน emplace_back เพราะ RenderTexture copy ไม่ได้
     cities.push_back(std::make_unique<City>(spawnR, spawnC, center));
-    // เปรมทำ - จบ
 
     generateWorldResources();
     spawnStarterResources(spawnR, spawnC);
@@ -155,7 +144,6 @@ void GameMap::spawnStarterResources(int r, int c) {
     int mc = std::min(cols - 1, std::max(0, c - 2));
     createCluster(TerrainType::Mountain, mr, mc, 4);
 
-    // --- กำหนดค่าคงที่เริ่มต้น (Starter Pack) ทิ้งไว้ที่นี่ ---
     m_starterPack.gold = 100;
     m_starterPack.wood = 50;
     m_starterPack.food = 50;
@@ -318,7 +306,6 @@ void GameMap::updateHighlight(sf::Vector2f mousePos) {
         sf::FloatRect bounds = tile.shape.getGlobalBounds();
         float centerX = bounds.left + bounds.width / 2.0f;
         float centerY = bounds.top + bounds.height / 2.0f;
-
         float dx = mousePos.x - centerX;
         float dy = mousePos.y - centerY;
         float dist = std::sqrt(dx * dx + dy * dy);
@@ -335,9 +322,7 @@ void GameMap::updateHighlight(sf::Vector2f mousePos) {
 }
 
 void GameMap::draw(sf::RenderWindow& window) {
-    for (const auto& tile : tiles) {
-        window.draw(tile.shape);
-    }
+    for (const auto& tile : tiles) window.draw(tile.shape);
     drawCities(window);
     for (const auto& tile : tiles) {
         if (tile.isPath) {
@@ -359,16 +344,13 @@ void GameMap::draw(sf::RenderWindow& window) {
     }
 }
 
-void GameMap::drawCities(sf::RenderWindow& window)
-{
-    // เปรมทำ - เปลี่ยน . เป็น -> เพราะใช้ unique_ptr
+void GameMap::drawCities(sf::RenderWindow& window) {
     for (auto& city : cities) {
         HexTile* tile = getTile(city->getR(), city->getC());
         if (tile && tile->isExplored) {
             city->draw(window);
         }
     }
-    // เปรมทำ - จบ
 }
 
 sf::ConvexShape GameMap::createHexShape(float x, float y, TerrainType type) {
@@ -377,10 +359,7 @@ sf::ConvexShape GameMap::createHexShape(float x, float y, TerrainType type) {
     for (int i = 0; i < 6; ++i) {
         float angle = 60.f * i - 30.f;
         float rad = angle * PI / 180.f;
-        hex.setPoint(i, sf::Vector2f(
-            HEX_SIZE * std::cos(rad),
-            HEX_SIZE * std::sin(rad)
-        ));
+        hex.setPoint(i, sf::Vector2f(HEX_SIZE * std::cos(rad), HEX_SIZE * std::sin(rad)));
     }
     hex.setPosition(x, y);
     hex.setOutlineThickness(-1.f);
@@ -388,12 +367,8 @@ sf::ConvexShape GameMap::createHexShape(float x, float y, TerrainType type) {
 }
 
 City* GameMap::getCityAt(int r, int c) {
-    // เปรมทำ - เปลี่ยน . เป็น -> และใช้ .get() เพราะใช้ unique_ptr
     for (auto& city : cities) {
-        if (city->getR() == r && city->getC() == c) {
-            return city.get();
-        }
+        if (city->getR() == r && city->getC() == c) return city.get();
     }
     return nullptr;
-    // เปรมทำ - จบ
 }
