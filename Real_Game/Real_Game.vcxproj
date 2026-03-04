@@ -133,7 +133,9 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AIManager.cpp" />
     <ClCompile Include="City.cpp" />
+    <ClCompile Include="CombatManager.cpp" />
     <ClCompile Include="GameCamera.cpp" />
     <ClCompile Include="GameMap.cpp" />
     <ClCompile Include="main.cpp" />
@@ -144,8 +146,10 @@
     <ClCompile Include="Unit.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AIManager.h" />
     <ClInclude Include="BuildingType.h" />
     <ClInclude Include="City.h" />
+    <ClInclude Include="CombatManager.h" />
     <ClInclude Include="GameCamera.h" />
     <ClInclude Include="GameMap.h" />
     <ClInclude Include="MainMenu.h" />
@@ -156,7 +160,10 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="Blue Castle.png" />
+    <Image Include="C:\Users\USER\Downloads\food.png" />
+    <Image Include="C:\Users\USER\Downloads\gold.png" />
     <Image Include="C:\Users\USER\Downloads\U blue horse.jpg" />
+    <Image Include="C:\Users\USER\Downloads\wood.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
   <ImportGroup Label="ExtensionTargets">

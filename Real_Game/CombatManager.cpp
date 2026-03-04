@@ -1,0 +1,156 @@
+﻿#include "CombatManager.h"
+#include <cstdlib>
+#include <iostream>
+#include <algorithm>
+
+CombatManager::CombatManager() : m_isRolling(false), m_hasFont(false), m_isArmyAttack(true) {}
+
+void CombatManager::setFont(const sf::Font& font) {
+    m_font = font;
+    m_hasFont = true;
+}
+
+int CombatManager::rollDiceRisk(int numDice) {
+    int highest = 0;
+    for (int i = 0; i < numDice; i++) {
+        int roll = (std::rand() % 6) + 1;
+        if (roll > highest) highest = roll;
+    }
+    return highest;
+}
+
+void CombatManager::initiateCombat(int atkR, int atkC, int defR, int defC, int attackerOwner, sf::Sound& diceSound, bool isArmyAttack) {
+    m_atkStartR = atkR;
+    m_atkStartC = atkC;
+    m_defTargetR = defR;
+    m_defTargetC = defC;
+    m_attackerOwner = attackerOwner;
+    m_isArmyAttack = isArmyAttack;
+
+    m_finalAtkRoll = rollDiceRisk(3);
+    m_finalDefRoll = rollDiceRisk(2);
+
+    m_isRolling = true;
+    m_animTimer.restart();
+    diceSound.play();
+}
+
+void CombatManager::updateAndDraw(sf::RenderWindow& window, std::vector<Unit>& units, GameMap& worldMap, sf::Sound& diceSound, sf::Sound& hitSound) {
+    if (!m_isRolling) return;
+
+    float elapsed = m_animTimer.getElapsedTime().asSeconds();
+
+    if (elapsed > 2.5f) {
+        m_isRolling = false;
+        diceSound.stop();
+        hitSound.play();
+
+        auto atkIt = std::find_if(units.begin(), units.end(), [&](Unit& u) { return u.getR() == m_atkStartR && u.getC() == m_atkStartC && u.getOwner() == m_attackerOwner; });
+        auto defIt = std::find_if(units.begin(), units.end(), [&](Unit& u) { return u.getR() == m_defTargetR && u.getC() == m_defTargetC && u.getOwner() != m_attackerOwner; });
+
+        if (atkIt != units.end() && defIt != units.end()) {
+            if (m_finalAtkRoll > m_finalDefRoll) {
+                // ฝ่ายบุกชนะ!
+                units.erase(defIt);
+
+                bool tileEmpty = true;
+                for (auto& u : units) {
+                    if (u.getR() == m_defTargetR && u.getC() == m_defTargetC && u.getOwner() != m_attackerOwner) {
+                        tileEmpty = false; break;
+                    }
+                }
+
+                if (tileEmpty) {
+                    if (m_isArmyAttack) {
+                        for (auto& u : units) {
+                            if (u.getR() == m_atkStartR && u.getC() == m_atkStartC && u.getOwner() == m_attackerOwner) {
+                                u.moveTo(m_defTargetR, m_defTargetC); u.consumeAP(1);
+                            }
+                        }
+                    }
+                    else {
+                        auto singleAtk = std::find_if(units.begin(), units.end(), [&](Unit& u) { return u.getR() == m_atkStartR && u.getC() == m_atkStartC && u.getOwner() == m_attackerOwner; });
+                        if (singleAtk != units.end()) { singleAtk->moveTo(m_defTargetR, m_defTargetC); singleAtk->consumeAP(1); }
+                    }
+                    if (m_attackerOwner == 1) worldMap.revealFog(m_defTargetR, m_defTargetC, 1);
+                }
+                else {
+                    if (m_isArmyAttack) {
+                        for (auto& u : units) {
+                            if (u.getR() == m_atkStartR && u.getC() == m_atkStartC && u.getOwner() == m_attackerOwner) u.consumeAP(1);
+                        }
+                    }
+                    else {
+                        auto singleAtk = std::find_if(units.begin(), units.end(), [&](Unit& u) { return u.getR() == m_atkStartR && u.getC() == m_atkStartC && u.getOwner() == m_attackerOwner; });
+                        if (singleAtk != units.end()) singleAtk->consumeAP(1);
+                    }
+                }
+            }
+            else {
+                // ฝ่ายรับชนะ!
+                units.erase(atkIt);
+            }
+        }
+        return;
+    }
+
+    if (!m_hasFont) return;
+
+    sf::RectangleShape darkOverlay(sf::Vector2f(window.getSize().x, window.getSize().y));
+    darkOverlay.setFillColor(sf::Color(0, 0, 0, 180));
+    window.draw(darkOverlay);
+
+    if (elapsed < 1.5f) {
+        m_displayAtkRoll = (std::rand() % 6) + 1;
+        m_displayDefRoll = (std::rand() % 6) + 1;
+    }
+    else {
+        m_displayAtkRoll = m_finalAtkRoll;
+        m_displayDefRoll = m_finalDefRoll;
+    }
+
+    std::string titleStr = "COMBAT PHASE";
+    std::string atkStr = (m_attackerOwner == 1 ? "PLAYER (Attacker)\nRolls 3 Dice" : "AI (Attacker)\nRolls 3 Dice");
+    std::string defStr = (m_attackerOwner == 1 ? "AI (Defender)\nRolls 2 Dice" : "PLAYER (Defender)\nRolls 2 Dice");
+
+    sf::Text titleText(titleStr, m_font, 50);
+    titleText.setFillColor(sf::Color::Yellow);
+    titleText.setPosition(window.getSize().x / 2.0f - 200, 100);
+
+    sf::Text atkSideText(atkStr, m_font, 30);
+    atkSideText.setFillColor(sf::Color(255, 100, 100));
+    atkSideText.setPosition(window.getSize().x / 4.0f - 100, 300);
+
+    sf::Text atkRollText(std::to_string(m_displayAtkRoll), m_font, 100);
+    atkRollText.setFillColor(sf::Color::White);
+    atkRollText.setPosition(window.getSize().x / 4.0f, 400);
+
+    sf::Text vsText("VS", m_font, 40);
+    vsText.setFillColor(sf::Color::White);
+    vsText.setPosition(window.getSize().x / 2.0f - 25, 420);
+
+    sf::Text defSideText(defStr, m_font, 30);
+    defSideText.setFillColor(sf::Color(100, 150, 255));
+    defSideText.setPosition(window.getSize().x * 3.0f / 4.0f - 100, 300);
+
+    sf::Text defRollText(std::to_string(m_displayDefRoll), m_font, 100);
+    defRollText.setFillColor(sf::Color::White);
+    defRollText.setPosition(window.getSize().x * 3.0f / 4.0f, 400);
+
+    window.draw(titleText); window.draw(atkSideText); window.draw(atkRollText);
+    window.draw(vsText); window.draw(defSideText); window.draw(defRollText);
+
+    if (elapsed >= 1.5f) {
+        sf::Text resultText("", m_font, 60);
+        if (m_finalAtkRoll > m_finalDefRoll) {
+            resultText.setString("ATTACKER WINS!");
+            resultText.setFillColor(sf::Color::Green);
+        }
+        else {
+            resultText.setString("DEFENDER WINS!");
+            resultText.setFillColor(sf::Color::Red);
+        }
+        resultText.setPosition(window.getSize().x / 2.0f - 220, 600);
+        window.draw(resultText);
+    }
+}

@@ -63,6 +63,8 @@ public:
     // รีเซ็ตกลับ None เมื่อต้องการแสดงเมนูอีกครั้ง
     void resetState() { m_state = MenuState::None; }
 
+    void loadVideoFrames(const std::string& folderPath, int frameCount);
+
 private:
     void buildUI();
     void rebuildButtonBounds();
@@ -95,4 +97,10 @@ private:
 
     // Cached size
     float m_W = 0.f, m_H = 0.f;
+    std::vector<sf::Texture> m_videoFrames;
+    sf::Sprite               m_videoSprite;
+    int                      m_currentFrame = 0;
+    float                    m_frameTimer = 0.f;
+    float                    m_frameDuration = 1.f / 30.f;
+    bool                     m_videoLoaded = false;
 };
