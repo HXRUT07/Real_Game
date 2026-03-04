@@ -13,6 +13,7 @@ private:
     bool isPanelVisible;
     sf::RectangleShape infoPanel;
     sf::Text infoContent;
+    std::string m_targetResourceStr;
 
     // -------------------------------
     // Resource Icon (เปรมทำ)
@@ -23,14 +24,12 @@ private:
     sf::Sprite foodIcon;
     sf::Sprite woodIcon;
     sf::Sprite goldIcon;
-    // เปรมทำ - ตัวแปรเก็บค่าทรัพยากรที่จะแสดงมุมขวาบน
     int m_wood = 0;
     int m_gold = 0;
     int m_food = 0;
     sf::Text m_woodText;
     sf::Text m_goldText;
     sf::Text m_foodText;
-    // เปรมทำ - จบ
 
     // --- ส่วนแถบขวา (Side Panel) ---
     bool m_showSidePanel = false;
@@ -58,13 +57,14 @@ public:
     void setSelectionList(const std::vector<Unit*>& units);
     void clearSelection();
     void update(sf::Vector2f mousePos);
+
+    // ฟังก์ชันวาด UI
     void draw(sf::RenderWindow& window);
     void updateTurnInfo(int playerTurn, int turnNumber);
     bool isEndTurnButtonClicked(sf::Vector2f mousePos);
 
     // เปรมทำ - ฟังก์ชันอัปเดตทรัพยากรมุมขวาบน
     void updateResourceBar(int wood, int gold, int food);
-    // เปรมทำ - จบ
 
     // --- ฟังก์ชันคุมปุ่มแยกกองทัพ ---
     bool isSidePanelVisible() const { return m_showSidePanel; }

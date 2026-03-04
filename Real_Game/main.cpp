@@ -2,22 +2,20 @@
 #include <SFML/Audio.hpp> 
 #include <vector>
 #include <cmath>
-#include <cstdlib>
-#include <ctime>
-#include <iostream>
-#include <string>
+#include <cstdlib> 
+#include <ctime>   
+#include <iostream> 
+#include <string>   
 #include <algorithm> 
 
-#include "GameMap.h"
-#include "MouseUI.h"
-#include "GameCamera.h"
-#include "Unit.h"
-#include "ResourceManage.h"
-#include "TurnManager.h"
-#include "MainMenu.h"
-#include "Cloud.h" // เปรมทำ - ระบบก้อนเมฆ
+#include "GameMap.h"     
+#include "MouseUI.h"     
+#include "GameCamera.h"  
+#include "Unit.h"        
+#include "ResourceManage.h" 
+#include "TurnManager.h" 
+#include "MainMenu.h" 
 
-// ฟังก์ชันหาระยะทาง (สำหรับ AI และระบบทั่วไป)
 int getHexDistance(int r1, int c1, int r2, int c2) {
     int ac1 = c1 - (r1 - (r1 & 1)) / 2;
     int ac2 = c2 - (r2 - (r2 & 1)) / 2;
@@ -49,26 +47,19 @@ int main() {
     sf::Sound sndHit(bufHit);
     sf::Sound sndClick(bufClick);
 
-    // ----Main Menu----
     {
-        MainMenu menu(window,
-            "assets/background.png",
-            "assets/fonts/Trajan Pro Regular.ttf");
+        MainMenu menu(window, "assets/background.png", "assets/fonts/Trajan Pro Regular.ttf");
         menu.loadVideoFrames("assets/frames", 240);
         sf::Clock menuClock;
 
         while (window.isOpen()) {
             float dt = menuClock.restart().asSeconds();
-
             sf::Event event;
             while (window.pollEvent(event)) {
-                if (event.type == sf::Event::Closed)
-                    window.close();
+                if (event.type == sf::Event::Closed) window.close();
                 menu.handleEvent(event);
             }
-
             menu.update(dt);
-
             if (menu.getState() == MenuState::Play)  break;
             if (menu.getState() == MenuState::Exit) { window.close(); break; }
 
@@ -82,11 +73,6 @@ int main() {
     GameCamera camera(window.getSize().x, window.getSize().y);
     MouseUI gui;
 
-    // เปรมทำ - สร้างระบบก้อนเมฆ
-    CloudSystem cloudSystem((float)window.getSize().x, (float)window.getSize().y, 6);
-    sf::Clock cloudClock;
-    // เปรมทำ - จบ
-
     std::vector<Unit> units;
     units.reserve(1000);
 
@@ -94,6 +80,7 @@ int main() {
     bool isGameRunning = false;
     int unitNameCounter = 1;
     TurnManager turnSys(2);
+
     int currentTurnNumber = 1;
 
     std::vector<Unit*> currentStack;
@@ -124,16 +111,12 @@ int main() {
         };
 
     while (window.isOpen()) {
-
         sf::Vector2f mousePosScreen = window.mapPixelToCoords(sf::Mouse::getPosition(window));
         sf::Event event;
 
         while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed)
-                window.close();
-
-            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)
-                window.close();
+            if (event.type == sf::Event::Closed) window.close();
+            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) window.close();
 
             if (!isRollingDice) {
                 camera.handleEvent(event, window);
@@ -197,16 +180,24 @@ int main() {
                     gui.hideInfo();
                     activeCityUI = nullptr;
 
-                    if (!isGameRunning) {
+                    if (!worldMap.isGameStarted()) {
                         worldMap.handleMouseClick(worldPos);
 
                         if (worldMap.isGameStarted()) {
                             isGameRunning = true;
-
                             int spawnR = 0, spawnC = 0;
                             if (worldMap.getGridCoords(worldPos, spawnR, spawnC)) {
                                 sndMove.play();
                                 units.emplace_back("Commander", spawnR, spawnC, 1);
+
+                                // --- [NEW] ยัด Starter Pack ให้เมืองหลวง 200 ทันที! ---
+                                City* myCity = worldMap.getFirstCity();
+                                if (myCity != nullptr) {
+                                    myCity->addGold(200);
+                                    myCity->addWood(200);
+                                    myCity->addFood(200);
+                                    std::cout << "Received Starter Pack: 200G 200W 200F!" << std::endl;
+                                }
 
                                 int enemyR = spawnR, enemyC = spawnC;
                                 int attempts = 0;
@@ -221,8 +212,6 @@ int main() {
 
                                 aiBaseR = enemyR; aiBaseC = enemyC;
                                 units.emplace_back("Enemy", enemyR, enemyC, 2);
-
-                                std::cout << "City Founded and Commander Spawned at " << spawnR << "," << spawnC << std::endl;
                             }
                         }
                     }
@@ -345,6 +334,7 @@ int main() {
                     if (turnSys.getCurrentPlayer() == 1) {
                         sndClick.play();
                         turnSys.endTurn(units);
+
                         gui.clearSelection(); leadUnit = nullptr; currentStack.clear(); worldMap.clearHighlight();
                         activeCityUI = nullptr;
                         aiTimer.restart();
@@ -354,9 +344,6 @@ int main() {
             }
         }
 
-        // -----------------------------------------------------------------------
-        // จบอนิเมชันลูกเต๋า
-        // -----------------------------------------------------------------------
         if (isRollingDice && diceAnimTimer.getElapsedTime().asSeconds() > 2.5f) {
             isRollingDice = false;
             sndDice.stop();
@@ -408,9 +395,6 @@ int main() {
             }
         }
 
-        // -----------------------------------------------------------------------
-        // ระบบสมอง AI
-        // -----------------------------------------------------------------------
         if (isGameRunning && turnSys.getCurrentPlayer() == 2 && !isRollingDice) {
 
             if (aiTimer.getElapsedTime().asSeconds() > 0.5f) {
@@ -520,8 +504,8 @@ int main() {
             }
         }
 
-        // อัปเดตกล้อง
         if (!isRollingDice) camera.update(window);
+
         window.setView(camera.getView());
 
         if (!isRollingDice) {
@@ -529,17 +513,11 @@ int main() {
             worldMap.updateHighlight(mousePos);
         }
 
-        // เปรมทำ - อัปเดตก้อนเมฆ
-        float cloudDt = cloudClock.restart().asSeconds();
-        cloudSystem.update(cloudDt);
-        // เปรมทำ - จบ
-
         window.clear(sf::Color(20, 20, 30));
 
         window.setView(camera.getView());
         worldMap.draw(window);
 
-        // ไฮไลท์เป้าหมายสีแดง
         if (leadUnit != nullptr && turnSys.getCurrentPlayer() == 1) {
             for (auto& u : units) {
                 if (u.getOwner() == 2 && worldMap.isValidMove(u.getR(), u.getC())) {
@@ -568,25 +546,21 @@ int main() {
         }
         worldMap.drawCities(window);
 
-        // --- UI ---
         gui.updateTurnInfo(turnSys.getCurrentPlayer(), currentTurnNumber);
 
         City* myCity = worldMap.getFirstCity();
         if (myCity) gui.updateResourceBar(myCity->getWood(), myCity->getGold(), myCity->getFood());
 
         window.setView(window.getDefaultView());
-        gui.draw(window);
 
-        // เปรมทำ - วาดก้อนเมฆทับทุกอย่าง (ลอยหน้าสุด)
-        window.setView(window.getDefaultView());
-        float zoomLevel = camera.getZoomLevel();
-        cloudSystem.draw(window, zoomLevel);
-        // เปรมทำ - จบ
+        // --- ซ่อน UI ตามสถานะว่าเกมเริ่มหรือยัง ---
+        if (worldMap.isGameStarted()) {
+            gui.draw(window);
+        }
 
-        // วาดหน้าต่างทอยเต๋า
         if (isRollingDice && hasCombatFont) {
             float elapsed = diceAnimTimer.getElapsedTime().asSeconds();
-            sf::RectangleShape darkOverlay(sf::Vector2f(window.getSize().x, window.getSize().y));
+            sf::RectangleShape darkOverlay(sf::Vector2f((float)window.getSize().x, (float)window.getSize().y));
             darkOverlay.setFillColor(sf::Color(0, 0, 0, 180));
             window.draw(darkOverlay);
 
@@ -603,12 +577,12 @@ int main() {
             std::string atkStr = (currentAttackerOwner == 1 ? "PLAYER (Attacker)\nRolls 3 Dice" : "AI (Attacker)\nRolls 3 Dice");
             std::string defStr = (currentAttackerOwner == 1 ? "AI (Defender)\nRolls 2 Dice" : "PLAYER (Defender)\nRolls 2 Dice");
 
-            sf::Text titleText(titleStr, combatFont, 50); titleText.setFillColor(sf::Color::Yellow); titleText.setPosition(window.getSize().x / 2.0f - 200, 100);
-            sf::Text atkSideText(atkStr, combatFont, 30); atkSideText.setFillColor(sf::Color(255, 100, 100)); atkSideText.setPosition(window.getSize().x / 4.0f - 100, 300);
-            sf::Text atkRollText(std::to_string(displayAtkRoll), combatFont, 100); atkRollText.setFillColor(sf::Color::White); atkRollText.setPosition(window.getSize().x / 4.0f, 400);
-            sf::Text vsText("VS", combatFont, 40); vsText.setFillColor(sf::Color::White); vsText.setPosition(window.getSize().x / 2.0f - 25, 420);
-            sf::Text defSideText(defStr, combatFont, 30); defSideText.setFillColor(sf::Color(100, 150, 255)); defSideText.setPosition(window.getSize().x * 3.0f / 4.0f - 100, 300);
-            sf::Text defRollText(std::to_string(displayDefRoll), combatFont, 100); defRollText.setFillColor(sf::Color::White); defRollText.setPosition(window.getSize().x * 3.0f / 4.0f, 400);
+            sf::Text titleText(titleStr, combatFont, 50); titleText.setFillColor(sf::Color::Yellow); titleText.setPosition(window.getSize().x / 2.0f - 200.f, 100.f);
+            sf::Text atkSideText(atkStr, combatFont, 30); atkSideText.setFillColor(sf::Color(255, 100, 100)); atkSideText.setPosition(window.getSize().x / 4.0f - 100.f, 300.f);
+            sf::Text atkRollText(std::to_string(displayAtkRoll), combatFont, 100); atkRollText.setFillColor(sf::Color::White); atkRollText.setPosition(window.getSize().x / 4.0f, 400.f);
+            sf::Text vsText("VS", combatFont, 40); vsText.setFillColor(sf::Color::White); vsText.setPosition(window.getSize().x / 2.0f - 25.f, 420.f);
+            sf::Text defSideText(defStr, combatFont, 30); defSideText.setFillColor(sf::Color(100, 150, 255)); defSideText.setPosition(window.getSize().x * 3.0f / 4.0f - 100.f, 300.f);
+            sf::Text defRollText(std::to_string(displayDefRoll), combatFont, 100); defRollText.setFillColor(sf::Color::White); defRollText.setPosition(window.getSize().x * 3.0f / 4.0f, 400.f);
 
             window.draw(titleText); window.draw(atkSideText); window.draw(atkRollText);
             window.draw(vsText); window.draw(defSideText); window.draw(defRollText);
@@ -621,7 +595,7 @@ int main() {
                 else {
                     resultText.setString("DEFENDER WINS!"); resultText.setFillColor(sf::Color::Red);
                 }
-                resultText.setPosition(window.getSize().x / 2.0f - 220, 600);
+                resultText.setPosition(window.getSize().x / 2.0f - 220.f, 600.f);
                 window.draw(resultText);
             }
         }
@@ -630,36 +604,4 @@ int main() {
     }
 
     return 0;
-
-#if 0
-    GameMap gameMap(10, 10);
-    sf::Font font;
-    font.loadFromFile("arial.ttf");
-    sf::RectangleShape panel;
-    panel.setSize(sf::Vector2f(300, 600));
-    panel.setFillColor(sf::Color(40, 40, 40));
-    panel.setPosition(850, 50);
-    sf::Text panelText;
-    panelText.setFont(font);
-    panelText.setCharacterSize(18);
-    panelText.setFillColor(sf::Color::White);
-    panelText.setPosition(870, 70);
-    while (window.isOpen()) {
-        sf::Event event;
-        while (window.pollEvent(event)) {
-            if (event.type == sf::Event::Closed) window.close();
-            if (event.type == sf::Event::MouseButtonPressed) {
-                sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
-                gameMap.handleMouseClick(mousePos);
-            }
-        }
-        window.clear();
-        gameMap.draw(window);
-        City* city = gameMap.getSelectedCity();
-        if (city != nullptr) { window.draw(panel); panelText.setString(city->getCityInfo()); window.draw(panelText); }
-        window.display();
-    }
-#endif
 }
-
-// ไม่ต้องเอาคอมเมนต์ออก
