@@ -190,13 +190,14 @@ int main() {
                                 sndMove.play();
                                 units.emplace_back("Commander", spawnR, spawnC, 1);
 
-                                // --- [NEW] ยัด Starter Pack ให้เมืองหลวง 200 ทันที! ---
+                                // --- ยัด Starter Pack ให้เมืองหลวงทันที! ---
                                 City* myCity = worldMap.getFirstCity();
                                 if (myCity != nullptr) {
-                                    myCity->addGold(200);
-                                    myCity->addWood(200);
-                                    myCity->addFood(200);
-                                    std::cout << "Received Starter Pack: 200G 200W 200F!" << std::endl;
+                                    ResourceYield starter = worldMap.getStarterPackValues();
+                                    myCity->addGold(starter.gold);
+                                    myCity->addWood(starter.wood);
+                                    myCity->addFood(starter.food);
+                                    std::cout << "Received Starter Pack: " << starter.gold << "G " << starter.wood << "W " << starter.food << "F!" << std::endl;
                                 }
 
                                 int enemyR = spawnR, enemyC = spawnC;
@@ -263,6 +264,20 @@ int main() {
                                         }
                                         else {
                                             leadUnit->moveTo(r, c); leadUnit->consumeAP(1);
+                                        }
+
+                                        // --- ระบบเดินแล้วดูดทรัพยากรเข้าเมือง ---
+                                        HexTile* targetTile = worldMap.getTile(r, c);
+                                        if (targetTile != nullptr) {
+                                            if (targetTile->gold > 0 || targetTile->wood > 0 || targetTile->food > 0) {
+                                                City* myCity = worldMap.getFirstCity();
+                                                if (myCity) {
+                                                    myCity->addGold(targetTile->gold);
+                                                    myCity->addWood(targetTile->wood);
+                                                    myCity->addFood(targetTile->food);
+                                                }
+                                                targetTile->gold = 0; targetTile->wood = 0; targetTile->food = 0;
+                                            }
                                         }
 
                                         worldMap.revealFog(r, c, 1);
@@ -549,12 +564,15 @@ int main() {
 
         gui.updateTurnInfo(turnSys.getCurrentPlayer(), currentTurnNumber);
 
+        // --- [แก้ไขตรงนี้!] สั่งให้อัปเดตข้อมูลของหน้าต่าง Treasury แบบออโต้! ---
         City* myCity = worldMap.getFirstCity();
-        if (myCity) gui.updateResourceBar(myCity->getWood(), myCity->getGold(), myCity->getFood());
+        if (myCity) {
+            gui.updateResourceBar(myCity->getWood(), myCity->getGold(), myCity->getFood());
+            
+        }
 
         window.setView(window.getDefaultView());
 
-        // --- ซ่อน UI ตามสถานะว่าเกมเริ่มหรือยัง ---
         if (worldMap.isGameStarted()) {
             gui.draw(window);
         }
