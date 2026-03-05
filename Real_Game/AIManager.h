@@ -15,7 +15,7 @@ private:
     int aiCityLevel;
 
     sf::Clock aiTimer;
-    int hexDistance(int r1, int c1, int r2, int c2);
+    int hexDistance(int r1, int c1, int r2, int c2) const;
 
     // ระบบตัดสินใจเชิงกลยุทธ์
     int  countAIUnits(const std::vector<Unit>& units) const;

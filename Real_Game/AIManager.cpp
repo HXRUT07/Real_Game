@@ -35,7 +35,7 @@ void AIManager::initBase(int r, int c) {
     m_rallyC = std::max(0, std::min(49, c));
 }
 
-int AIManager::hexDistance(int r1, int c1, int r2, int c2) {
+int AIManager::hexDistance(int r1, int c1, int r2, int c2) const {
     int ac1 = c1 - (r1 - (r1 & 1)) / 2;
     int ac2 = c2 - (r2 - (r2 & 1)) / 2;
     return (std::abs(r1 - r2) + std::abs(ac1 - ac2) + std::abs((r1 - r2) + (ac1 - ac2))) / 2;
