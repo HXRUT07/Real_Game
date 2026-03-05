@@ -51,7 +51,7 @@ private:
 
 public:
     MouseUI();
-    void showResourcePanel(float windowWidth, int gold, int wood, int food);
+    void showResourcePanel(float windowWidth, int gold, int wood, int food, const std::string& terrainName = "TILE");
     void hideInfo();
     void showCityResourcePanel(float windowWidth, int gold, int wood, int food);
     void setSelectionList(const std::vector<Unit*>& units);

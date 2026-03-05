@@ -184,8 +184,17 @@ int main() {
                             cityPanel.clear();
                             HexTile* clickedTile = worldMap.getTile(r, c);
                             if (clickedTile != nullptr && clickedTile->isExplored) {
+                                // ดึงชื่อพื้นที่จาก TerrainType ใน GameMap
+                                std::string tName = "TILE";
+                                switch (clickedTile->type) {
+                                case TerrainType::Grass:    tName = "GRASSLAND";  break;
+                                case TerrainType::Forest:   tName = "FOREST";     break;
+                                case TerrainType::Mountain: tName = "MOUNTAIN";   break;
+                                case TerrainType::Water:    tName = "WATER";      break;
+                                case TerrainType::City:     tName = "CITY";       break;
+                                }
                                 gui.showResourcePanel((float)window.getSize().x,
-                                    clickedTile->gold, clickedTile->wood, clickedTile->food);
+                                    clickedTile->gold, clickedTile->wood, clickedTile->food, tName);
                             }
                             else {
                                 gui.hideInfo();

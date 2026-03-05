@@ -76,15 +76,13 @@ MouseUI::MouseUI() {
     }
 }
 
-
-
-void MouseUI::showResourcePanel(float windowWidth, int gold, int wood, int food) {
+void MouseUI::showResourcePanel(float windowWidth, int gold, int wood, int food, const std::string& terrainName) {
     isPanelVisible = true;
     m_showSidePanel = false;
 
     // แก้ไขบัคเพื่อนลืมใส่วงเล็บปิด
     m_targetResourceStr =
-        "--- TILE RESOURCES ---\n\n"
+        terrainName + "\n\n" +   // ← ใช้ชื่อพื้นที่แทน TILE RESOURCES
         "Gold : " + std::to_string(gold) + "\n" +
         "Wood : " + std::to_string(wood) + "\n" +
         "Food : " + std::to_string(food);
@@ -181,7 +179,7 @@ void MouseUI::draw(sf::RenderWindow& window) {
 
         float sx = 16.f, sy = 16.f;
         float medR = 34.f;
-        float cardW = 260.f, cardH = medR * 2 + 10.f;
+        float cardW = 260.f, cardH = medR * 2 + 16.f;
         float medCX = sx + medR + 12.f, medCY = sy + cardH / 2.f;
         float rad = 8.f;
 
@@ -194,15 +192,15 @@ void MouseUI::draw(sf::RenderWindow& window) {
 
         // ขอบโค้งมน
         sf::VertexArray ol(sf::LineStrip, 9);
-        ol[0] = { {sx + rad,       sy},           cRim };
-        ol[1] = { {sx + cardW - rad, sy},          cRim };
-        ol[2] = { {sx + cardW,     sy + rad},       cRim };
-        ol[3] = { {sx + cardW,     sy + cardH - rad}, cRim };
-        ol[4] = { {sx + cardW - rad, sy + cardH},  cRim };
-        ol[5] = { {sx + rad,       sy + cardH},    cRim };
-        ol[6] = { {sx,             sy + cardH - rad}, cRim };
-        ol[7] = { {sx,             sy + rad},      cRim };
-        ol[8] = { {sx + rad,       sy},            cRim };
+        ol[0] = { {sx + rad,        sy},                cRim };
+        ol[1] = { {sx + cardW - rad,sy},                cRim };
+        ol[2] = { {sx + cardW,      sy + rad},          cRim };
+        ol[3] = { {sx + cardW,      sy + cardH - rad},  cRim };
+        ol[4] = { {sx + cardW - rad,sy + cardH},        cRim };
+        ol[5] = { {sx + rad,        sy + cardH},        cRim };
+        ol[6] = { {sx,              sy + cardH - rad},  cRim };
+        ol[7] = { {sx,              sy + rad},          cRim };
+        ol[8] = { {sx + rad,        sy},                cRim };
         window.draw(ol);
 
         // Medallion วงกลม
@@ -231,7 +229,7 @@ void MouseUI::draw(sf::RenderWindow& window) {
         float textX = medCX + medR + 12.f;
 
         // ชื่อผู้เล่น
-        sf::Text pText(isP1 ? "PLAYER  1" : "AI  PLAYER", font, 19);
+        sf::Text pText(isP1 ? "PLAYER 1" : "AI PLAYER", font, 20);
         pText.setFillColor(cPlayer); pText.setStyle(sf::Text::Bold); pText.setLetterSpacing(1.8f);
         sf::FloatRect pb = pText.getLocalBounds(); pText.setOrigin(pb.left, pb.top);
         pText.setPosition(textX, medCY - cardH * 0.28f); window.draw(pText);
@@ -356,15 +354,68 @@ void MouseUI::draw(sf::RenderWindow& window) {
 
     // วาด Info Panel ตอนคลิกขวา
     if (isPanelVisible) {
-        float panelW = 270.f;
-        float padding = 20.f;
-        infoPanel.setPosition(screenW - panelW - padding, padding + 80.f);
-        window.draw(infoPanel);
+        float panelW = 220.f;
+        float panelH = 160.f;
+        float margin = 16.f;
+        float rad = 8.f;
+        float panX = screenW - panelW - margin;
+        float panY = margin + 220.f;   // ← เลื่อนลงมาใต้ resource bar
 
-        sf::Text targetText(m_targetResourceStr, font, 18);
-        targetText.setFillColor(sf::Color::Cyan);
-        targetText.setPosition(infoPanel.getPosition().x + 15.f, infoPanel.getPosition().y + 15.f);
-        window.draw(targetText);
+        sf::Color cBg = sf::Color(12, 10, 6, 220);
+        sf::Color cRim = sf::Color(160, 130, 45, 200);
+
+        // พื้นหลัง rounded
+        sf::RectangleShape bgH({ panelW, panelH - rad * 2 }); bgH.setPosition(panX, panY + rad); bgH.setFillColor(cBg); window.draw(bgH);
+        sf::RectangleShape bgV({ panelW - rad * 2, panelH }); bgV.setPosition(panX + rad, panY); bgV.setFillColor(cBg); window.draw(bgV);
+        float cx4[4] = { panX, panX + panelW - rad * 2, panX, panX + panelW - rad * 2 };
+        float cy4[4] = { panY, panY, panY + panelH - rad * 2, panY + panelH - rad * 2 };
+        for (int i = 0; i < 4; i++) { sf::CircleShape c(rad); c.setPosition(cx4[i], cy4[i]); c.setFillColor(cBg); window.draw(c); }
+
+        // ขอบโค้งมนสีทอง
+        sf::VertexArray ol(sf::LineStrip, 9);
+        ol[0] = { {panX + rad,        panY},                cRim };
+        ol[1] = { {panX + panelW - rad, panY},              cRim };
+        ol[2] = { {panX + panelW,      panY + rad},         cRim };
+        ol[3] = { {panX + panelW,      panY + panelH - rad},cRim };
+        ol[4] = { {panX + panelW - rad, panY + panelH},     cRim };
+        ol[5] = { {panX + rad,         panY + panelH},      cRim };
+        ol[6] = { {panX,               panY + panelH - rad},cRim };
+        ol[7] = { {panX,               panY + rad},         cRim };
+        ol[8] = { {panX + rad,         panY},               cRim };
+        window.draw(ol);
+
+        // เส้นหัวข้อ
+        sf::RectangleShape divLine({ panelW - 20.f, 1.f });
+        divLine.setPosition(panX + 10.f, panY + 32.f);
+        divLine.setFillColor(sf::Color(160, 130, 45, 120));
+        window.draw(divLine);
+
+        // header - ออกมาแสดงตรงกลางบน (PLAY)
+        std::string headerStr = "";
+        std::string bodyStr = m_targetResourceStr;
+        size_t newline = m_targetResourceStr.find('\n');
+        if (newline != std::string::npos) {
+            headerStr = m_targetResourceStr.substr(0, newline);   // บรรทัดแรก
+            bodyStr = m_targetResourceStr.substr(newline + 1);  // บรรทัดที่เหลือ
+        }
+
+        // header — จัดกลางบนกรอบ (PLAY)
+        sf::Text headerText(headerStr, font, 15);
+        headerText.setFillColor(sf::Color(200, 170, 80, 255));   // ← สีทองหัวข้อ
+        headerText.setStyle(sf::Text::Bold);
+        headerText.setLetterSpacing(1.5f);
+        sf::FloatRect hb = headerText.getLocalBounds();
+        headerText.setOrigin(hb.left + hb.width / 2.f, hb.top); // ← จัดกลาง
+        headerText.setPosition(panX + panelW / 2.f, panY + 10.f); // ← กึ่งกลาง X, ชิดบน
+        window.draw(headerText);
+
+        // body — แสดงทรัพยากรด้านล่างเส้นคั่น (PLAY)
+        sf::Text bodyText(bodyStr, font, 15);
+        bodyText.setFillColor(sf::Color(200, 185, 140, 255));  // ← สีข้อความ resource
+        bodyText.setStyle(sf::Text::Bold);
+        bodyText.setPosition(panX + 14.f, panY + 38.f);        // ← ใต้เส้นคั่น
+        window.draw(bodyText);
+
     }
 
     if (m_showSidePanel) {
