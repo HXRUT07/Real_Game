@@ -5,7 +5,7 @@
 #include <memory>
 #include "City.h"
 #include "ResourceManage.h" 
-
+#include "Unit.h" 
 const float HEX_SIZE = 30.0f;
 
 inline sf::Color getBuildingColor(int buildingTypeIdx) {
@@ -57,6 +57,10 @@ public:
     void calculateValidMoves(int startR, int startC, int moveRange);
     void clearHighlight();
     void revealFog(int centerR, int centerC, int sightRange);
+
+    // --- ฟังก์ชันใหม่: กวาดสายตาทหารและเมืองทุกตัว ---
+    void updateVision(const std::vector<Unit>& units, int currentPlayer);
+
     HexTile* getTile(int r, int c);
     City* getCityAt(int r, int c);
 

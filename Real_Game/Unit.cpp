@@ -14,7 +14,8 @@ Unit::Unit(std::string name, int startR, int startC, int owner) {
     // ค่าสถานะเริ่มต้น
     m_maxAP = 2;
     m_currentAP = m_maxAP;
-    m_moveRange = 3;
+    m_moveRange = 1;
+    m_sightRange = 1;
 
     // สร้างตัวทหาร (วงกลม)
     m_shape.setRadius(15.0f);
