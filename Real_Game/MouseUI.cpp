@@ -366,7 +366,6 @@ void MouseUI::draw(sf::RenderWindow& window) {
     window.draw(buildingCityText);
 
     // เปรมทำ - วาด resource bar มุมขวาบน
-    float iconSize = 40.f;
     float gap = 90.f;
     float startX = screenW - (gap * 3) - 20.f;
     float iconY = 15.f;

@@ -135,7 +135,7 @@ int main() {
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) window.close();
 
-            // กด Escape เพื่อออกจากเกมได้ (สำคัญมากตอนเทส Fullscreen ไม่งั้นออกยาก)
+            // กด Escape เพื่อออกจากเกมได้ (สำคัญมากตอนเทส Fullscreen ไม่งนั้นออกยาก)
             if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) window.close();
 
             cityPanel.handleEvent(event);
@@ -661,29 +661,11 @@ int main() {
         }
         cityPanel.draw(window);
         buildMenu.draw(window);
-
-        if (isRollingDice && hasCombatFont) {
-            float elapsed = diceAnimTimer.getElapsedTime().asSeconds();
-            sf::RectangleShape darkOverlay(sf::Vector2f((float)window.getSize().x, (float)window.getSize().y));
-            darkOverlay.setFillColor(sf::Color(0, 0, 0, 180));
-            window.draw(darkOverlay);
-
-            if (elapsed < 1.5f) {
-                displayAtkRoll = (std::rand() % 6) + 1;
-                displayDefRoll = (std::rand() % 6) + 1;
-            }
-            else {
-                displayAtkRoll = finalAtkRoll;
-                displayDefRoll = finalDefRoll;
-            }
-
-        cityPanel.draw(window);
-
-        // ให้ CombatManager จัดการวาดและลบ Unit ให้เสร็จสรรพ
+       
         combatSys.updateAndDraw(window, units, worldMap, sndDice, sndHit);
 
         window.display();
-    } // <---  วงเล็บปิดของ while(window.isOpen())
+    } 
 
-    return 0; // <---  ย้าย return 0 มาไว้จุดล่างสุดนอกลูป
+    return 0; 
 }
