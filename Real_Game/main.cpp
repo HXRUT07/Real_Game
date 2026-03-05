@@ -294,7 +294,7 @@ int main() {
                             if (gui.isBuildingCityMode()) {
                                 HexTile* ft = worldMap.getTile(r, c);
                                 if (ft && ft->isVisible && worldMap.getCityAt(r, c) == nullptr) {
-                                    worldMap.foundCity(r, c);   
+                                    worldMap.foundCity(r, c);
                                     gui.setBuildingCityMode(false);
                                     std::cout << "New city built at " << r << "," << c << std::endl;
                                 }
@@ -564,21 +564,6 @@ int main() {
         }
         cityPanel.draw(window);
         buildMenu.draw(window);
-
-        if (isRollingDice && hasCombatFont) {
-            float elapsed = diceAnimTimer.getElapsedTime().asSeconds();
-            sf::RectangleShape darkOverlay(sf::Vector2f((float)window.getSize().x, (float)window.getSize().y));
-            darkOverlay.setFillColor(sf::Color(0, 0, 0, 180));
-            window.draw(darkOverlay);
-
-            if (elapsed < 1.5f) {
-                displayAtkRoll = (std::rand() % 6) + 1;
-                displayDefRoll = (std::rand() % 6) + 1;
-            }
-            else {
-                displayAtkRoll = finalAtkRoll;
-                displayDefRoll = finalDefRoll;
-            }
 
         cityPanel.draw(window);
 
