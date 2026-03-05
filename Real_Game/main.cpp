@@ -13,6 +13,7 @@
 #include "ResourceManage.h" // <--- เพิ่ม Header ของระบบทรัพยากร
 #include "TurnManager.h" // <--- ระบบเทิร์น
 #include "MainMenu.h" //<--- ระบบเมนูหลัก
+#include "CityPanel.h"
 
 int main() {
     // ตั้งค่า Seed สำหรับการสุ่ม (ใส่ใน Main ทีเดียวจบ)
@@ -64,6 +65,7 @@ int main() {
     GameCamera camera(window.getSize().x, window.getSize().y);
 
     MouseUI gui; //(PLAY)
+    CityPanel cityPanel(window.getSize().x, window.getSize().y);
 
     //----Unit System----//
     std::vector<Unit> units;       // เก็บยูนิตทั้งหมด
@@ -93,6 +95,7 @@ int main() {
             if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)
                 window.close();
 
+            cityPanel.handleEvent(event);
             // 3. ส่ง Event ให้กล้องจัดการ (คลิก/ปล่อย/หมุนล้อ)
             camera.handleEvent(event, window);
 
@@ -119,16 +122,15 @@ int main() {
                         City* clickedCity = worldMap.getCityAt(r, c);
                         if (clickedCity != nullptr) {
                             // ถ้ามีเมือง ให้โชว์หน้าต่างคลังหลวงของเมือง (CITY STOCKPILE)
-                            gui.showCityResourcePanel((float)window.getSize().x, clickedCity->getGold(), clickedCity->getWood(), clickedCity->getFood());
+                            cityPanel.setCity(clickedCity);
+                            gui.hideInfo();
                         }
                         else {
-                            // ถ้าไม่มีเมือง ค่อยไปดึงข้อมูลทรัพยากรบนพื้นดินปกติ
+                            cityPanel.clear();
                             HexTile* clickedTile = worldMap.getTile(r, c);
-
-                            // กฎ: ต้องมีช่องนี้อยู่จริง และ "ต้องเคยสำรวจแล้ว (isExplored)" เท่านั้น
                             if (clickedTile != nullptr && clickedTile->isExplored) {
-                                // โชว์ข้อมูลทรัพยากรของช่องนั้น
-                                gui.showResourcePanel((float)window.getSize().x, clickedTile->gold, clickedTile->wood, clickedTile->food);
+                                gui.showResourcePanel((float)window.getSize().x,
+                                    clickedTile->gold, clickedTile->wood, clickedTile->food);
                             }
                             else {
                                 // ถ้าคลิกขวาใส่หมอกดำๆ ให้ปิดหน้าต่างทิ้ง
@@ -277,7 +279,7 @@ int main() {
                     }
                 }
             }
-        } // <---  วงเล็บปิดของ while(window.pollEvent) ย้ายมาอยู่ตรงนี้
+        } 
 
         // -----------------------------------------------------------------------
         // ระบบสมอง AI (จะทำงานทันทีเมื่อเป็นตาของ Player 2)
@@ -351,6 +353,7 @@ int main() {
 
         window.setView(window.getDefaultView()); // คืนค่า View ปกติเพื่อวาด UI ทับข้างบนสุด
         gui.draw(window);
+        cityPanel.draw(window);
 
         window.display();
     } // <---  วงเล็บปิดของ while(window.isOpen())

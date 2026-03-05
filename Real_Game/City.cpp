@@ -3,7 +3,13 @@
 #include <cmath> // เปรมทำ - สำหรับ cos, sin
 #include <algorithm> // เปรมทำ - สำหรับ std::max
 
-//  ลบค่าในวงเล็บให้ตรงกับ City.h
+const City::UpgradeCost City::upgradeCosts[4] = {
+    { 100,  80,  50 },   // lv 1 -> 2
+    { 200, 150, 100 },   // lv 2 -> 3
+    { 400, 300, 200 },   // lv 3 -> 4
+    { 800, 600, 400 },   // lv 4 -> 5
+};
+
 City::City(int r, int c, sf::Vector2f pos)
     : gridR(r), gridC(c), center(pos)
 {
@@ -61,6 +67,29 @@ City::City(int r, int c, sf::Vector2f pos)
     stockpile.food = 50;
 }
 
+City::UpgradeCost City::getUpgradeCost() const {
+    if (isMaxLevel()) return { 0, 0, 0 };
+    return upgradeCosts[level - 1]; // level 1 -> index 0
+}
+
+bool City::canUpgrade() const {
+    if (isMaxLevel()) return false;
+    UpgradeCost cost = getUpgradeCost();
+    return stockpile.gold >= cost.gold &&
+        stockpile.wood >= cost.wood &&
+        stockpile.food >= cost.food;
+}
+
+bool City::upgrade() {
+    if (!canUpgrade()) return false;
+    UpgradeCost cost = getUpgradeCost();
+    stockpile.gold -= cost.gold;
+    stockpile.wood -= cost.wood;
+    stockpile.food -= cost.food;
+    level++;
+    return true;
+}
+
 void City::draw(sf::RenderWindow& window)
 {
     // เปรมทำ - วาด hexMaskedSprite แทน baseIcon
@@ -75,18 +104,26 @@ sf::FloatRect City::getBounds() const
     // เปรมทำ - จบ
 }
 
-std::string City::getCityInfo() const
-{
+std::string City::getCityInfo() const {
     std::stringstream ss;
     ss << "City Name: " << name << "\n\n";
-    // เปลี่ยนมาโชว์ของในคลังหลวง (stockpile) 
+    ss << "Level: " << level << " / " << maxLevel << "\n\n";
     ss << "Wood: " << stockpile.wood << "\n";
     ss << "Gold: " << stockpile.gold << "\n";
     ss << "Food: " << stockpile.food << "\n\n";
-    ss << "Upgraded: " << (upgraded ? "Yes" : "No");
+    if (!isMaxLevel()) {
+        UpgradeCost cost = getUpgradeCost();
+        ss << "Upgrade Cost:\n";
+        ss << "  Gold: " << cost.gold << "\n";
+        ss << "  Wood: " << cost.wood << "\n";
+        ss << "  Food: " << cost.food << "\n";
+    }
+    else {
+        ss << "MAX LEVEL\n";
+    }
     return ss.str();
 }
-ResourceYield City::getTotalResource() const
-{
+
+ResourceYield City::getTotalResource() const {
     return stockpile;
 }

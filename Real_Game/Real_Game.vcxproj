@@ -134,6 +134,7 @@
   </ItemDefinitionGroup>
   <ItemGroup>
     <ClCompile Include="City.cpp" />
+    <ClCompile Include="CityPanel.cpp" />
     <ClCompile Include="GameCamera.cpp" />
     <ClCompile Include="GameMap.cpp" />
     <ClCompile Include="main.cpp" />
