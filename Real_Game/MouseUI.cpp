@@ -171,8 +171,89 @@ void MouseUI::draw(sf::RenderWindow& window) {
     float screenW = (float)window.getSize().x;
     float screenH = (float)window.getSize().y;
 
-    window.draw(turnCounterText);
+    // ── Roman-style Player Card (top-left) ───────────────
+    {
+        bool isP1 = (turnCounterText.getFillColor() == sf::Color(100, 255, 100));
+        sf::Color cPlayer = isP1 ? sf::Color(100, 220, 100, 255) : sf::Color(220, 90, 90, 255);
+        sf::Color cGold = sf::Color(200, 170, 90, 255);
+        sf::Color cBg = sf::Color(12, 10, 6, 220);
+        sf::Color cRim = sf::Color(160, 130, 45, 200);
 
+        float sx = 16.f, sy = 16.f;
+        float medR = 34.f;
+        float cardW = 260.f, cardH = medR * 2 + 10.f;
+        float medCX = sx + medR + 12.f, medCY = sy + cardH / 2.f;
+        float rad = 8.f;
+
+        // พื้นหลัง card
+        sf::RectangleShape bgH({ cardW, cardH - rad * 2 }); bgH.setPosition(sx, sy + rad); bgH.setFillColor(cBg); window.draw(bgH);
+        sf::RectangleShape bgV({ cardW - rad * 2, cardH }); bgV.setPosition(sx + rad, sy); bgV.setFillColor(cBg); window.draw(bgV);
+        float cx4[4] = { sx, sx + cardW - rad * 2, sx, sx + cardW - rad * 2 };
+        float cy4[4] = { sy, sy, sy + cardH - rad * 2, sy + cardH - rad * 2 };
+        for (int i = 0; i < 4; i++) { sf::CircleShape c(rad); c.setPosition(cx4[i], cy4[i]); c.setFillColor(cBg); window.draw(c); }
+
+        // ขอบโค้งมน
+        sf::VertexArray ol(sf::LineStrip, 9);
+        ol[0] = { {sx + rad,       sy},           cRim };
+        ol[1] = { {sx + cardW - rad, sy},          cRim };
+        ol[2] = { {sx + cardW,     sy + rad},       cRim };
+        ol[3] = { {sx + cardW,     sy + cardH - rad}, cRim };
+        ol[4] = { {sx + cardW - rad, sy + cardH},  cRim };
+        ol[5] = { {sx + rad,       sy + cardH},    cRim };
+        ol[6] = { {sx,             sy + cardH - rad}, cRim };
+        ol[7] = { {sx,             sy + rad},      cRim };
+        ol[8] = { {sx + rad,       sy},            cRim };
+        window.draw(ol);
+
+        // Medallion วงกลม
+        sf::CircleShape outerRim(medR);
+        outerRim.setOrigin(medR, medR); outerRim.setPosition(medCX, medCY);
+        outerRim.setFillColor(cRim); window.draw(outerRim);
+
+        sf::CircleShape medBody(medR * 0.84f);
+        medBody.setOrigin(medR * 0.84f, medR * 0.84f); medBody.setPosition(medCX, medCY);
+        medBody.setFillColor(cBg); window.draw(medBody);
+
+        sf::CircleShape playerRing(medR * 0.84f);
+        playerRing.setOrigin(medR * 0.84f, medR * 0.84f); playerRing.setPosition(medCX, medCY);
+        playerRing.setFillColor(sf::Color::Transparent);
+        playerRing.setOutlineThickness(2.5f);
+        playerRing.setOutlineColor(cPlayer); window.draw(playerRing);
+
+        // ไอคอนใน medallion
+        sf::Text flag(isP1 ? "P1" : "AI", font, (unsigned)(medR * 0.60f));
+        flag.setFillColor(cPlayer); flag.setStyle(sf::Text::Bold);
+        sf::FloatRect fb = flag.getLocalBounds();
+        flag.setOrigin(fb.left + fb.width / 2.f, fb.top + fb.height / 2.f);
+        flag.setPosition(medCX, medCY); window.draw(flag);
+
+        // ข้อความทางขวา
+        float textX = medCX + medR + 12.f;
+
+        // ชื่อผู้เล่น
+        sf::Text pText(isP1 ? "PLAYER  1" : "AI  PLAYER", font, 19);
+        pText.setFillColor(cPlayer); pText.setStyle(sf::Text::Bold); pText.setLetterSpacing(1.8f);
+        sf::FloatRect pb = pText.getLocalBounds(); pText.setOrigin(pb.left, pb.top);
+        pText.setPosition(textX, medCY - cardH * 0.28f); window.draw(pText);
+
+        // เส้นคั่น
+        float lineW = cardW - (textX - sx) - 10.f;
+        sf::RectangleShape div({ lineW, 1.f });
+        div.setPosition(textX, medCY - 1.f);
+        div.setFillColor(sf::Color(160, 130, 45, 120)); window.draw(div);
+
+        // เลข Turn
+        std::string full = turnCounterText.getString();
+        std::string turnStr = "TURN  1";
+        size_t pos = full.find("Turn: ");
+        if (pos != std::string::npos) turnStr = "TURN  " + full.substr(pos + 6);
+        sf::Text tText(turnStr, font, 16);
+        tText.setFillColor(cGold); tText.setLetterSpacing(2.f);
+        sf::FloatRect tb = tText.getLocalBounds(); tText.setOrigin(tb.left, tb.top);
+        tText.setPosition(textX, medCY + cardH * 0.08f); window.draw(tText);
+    }
+
+    // ── END TURN circular button (bottom-right) ───────────
     {
         float cx = screenW - 70.f;
         float cy = screenH - 80.f;
@@ -185,65 +266,93 @@ void MouseUI::draw(sf::RenderWindow& window) {
 
         sf::CircleShape rim(R);
         rim.setOrigin(R, R); rim.setPosition(cx, cy);
-        rim.setFillColor(cRim);
-        window.draw(rim);
+        rim.setFillColor(cRim); window.draw(rim);
 
         sf::CircleShape body(R * 0.84f);
         body.setOrigin(R * 0.84f, R * 0.84f); body.setPosition(cx, cy);
-        body.setFillColor(cBody);
-        window.draw(body);
+        body.setFillColor(cBody); window.draw(body);
 
         sf::CircleShape ring(R * 0.84f);
         ring.setOrigin(R * 0.84f, R * 0.84f); ring.setPosition(cx, cy);
         ring.setFillColor(sf::Color::Transparent);
         ring.setOutlineThickness(1.5f);
-        ring.setOutlineColor(sf::Color(180, 145, 50, 160));
-        window.draw(ring);
+        ring.setOutlineColor(sf::Color(180, 145, 50, 160)); window.draw(ring);
 
         sf::CircleShape core(R * 0.60f);
         core.setOrigin(R * 0.60f, R * 0.60f); core.setPosition(cx, cy);
         core.setFillColor(cCore);
         core.setOutlineThickness(1.f);
-        core.setOutlineColor(cRim);
-        window.draw(core);
+        core.setOutlineColor(cRim); window.draw(core);
 
         sf::Text icon(">", font, (unsigned)(R * 0.60f * 0.9f));
         icon.setFillColor(cRim); icon.setStyle(sf::Text::Bold);
         sf::FloatRect ib = icon.getLocalBounds();
         icon.setOrigin(ib.left + ib.width / 2.f, ib.top + ib.height / 2.f);
-        icon.setPosition(cx, cy - R * 0.60f * 0.05f);
-        window.draw(icon);
+        icon.setPosition(cx, cy - R * 0.60f * 0.05f); window.draw(icon);
 
         sf::Text lbl(isP1 ? "END TURN" : "AI TURN", font, (unsigned)(R * 0.34f));
         lbl.setFillColor(isP1 ? sf::Color(230, 210, 160, 255) : sf::Color(130, 130, 130, 255));
         lbl.setStyle(sf::Text::Bold); lbl.setLetterSpacing(1.5f);
         sf::FloatRect lb = lbl.getLocalBounds();
         lbl.setOrigin(lb.left + lb.width / 2.f, lb.top);
-        lbl.setPosition(cx, cy + R + 6.f);
-        window.draw(lbl);
+        lbl.setPosition(cx, cy + R + 6.f); window.draw(lbl);
 
         // อัปเดต bounds สำหรับ click detection (ใช้แทน endTurnBtn เดิม)
         endTurnBtn.setPosition(cx - R, cy - R);
-        endTurnBtn.setSize({ R * 2,R * 2 });
+        endTurnBtn.setSize({ R * 2, R * 2 });
     }
 
-    // เปรมทำ - วาด resource bar มุมขวาบน
-    float iconSize = 40.f;
-    float gap = 90.f;
-    float startX = screenW - (gap * 3) - 20.f;
-    float iconY = 15.f;
-    float textY = iconY + iconSize + 2.f;
+    // เปรมทำ - วาด resource bar มุมขวาบน (Roman style แนวตั้ง)
+    {
+        float iconSize = 32.f;
+        float rowH = iconSize + 10.f;
+        float panW = 148.f, panH = rowH * 3 + 18.f;
+        float margin = 16.f, rad = 8.f;
+        float panX = screenW - panW - margin, panY = margin;
 
-    woodIcon.setPosition(startX, iconY);
-    m_woodText.setPosition(startX + 5.f, textY);
-    goldIcon.setPosition(startX + gap, iconY);
-    m_goldText.setPosition(startX + gap + 5.f, textY);
-    foodIcon.setPosition(startX + gap * 2, iconY);
-    m_foodText.setPosition(startX + gap * 2 + 5.f, textY);
+        sf::Color cBg = sf::Color(12, 10, 6, 220);
+        sf::Color cRim = sf::Color(160, 130, 45, 200);
 
-    window.draw(woodIcon); window.draw(m_woodText);
-    window.draw(goldIcon); window.draw(m_goldText);
-    window.draw(foodIcon); window.draw(m_foodText);
+        // พื้นหลัง rounded
+        sf::RectangleShape bgH({ panW, panH - rad * 2 }); bgH.setPosition(panX, panY + rad); bgH.setFillColor(cBg); window.draw(bgH);
+        sf::RectangleShape bgV({ panW - rad * 2, panH }); bgV.setPosition(panX + rad, panY); bgV.setFillColor(cBg); window.draw(bgV);
+        float cx4[4] = { panX, panX + panW - rad * 2, panX, panX + panW - rad * 2 };
+        float cy4[4] = { panY, panY, panY + panH - rad * 2, panY + panH - rad * 2 };
+        for (int i = 0; i < 4; i++) { sf::CircleShape c(rad); c.setPosition(cx4[i], cy4[i]); c.setFillColor(cBg); window.draw(c); }
+
+        // ขอบโค้งมน
+        sf::VertexArray ol(sf::LineStrip, 9);
+        ol[0] = { {panX + rad,       panY},           cRim };
+        ol[1] = { {panX + panW - rad, panY},           cRim };
+        ol[2] = { {panX + panW,       panY + rad},     cRim };
+        ol[3] = { {panX + panW,       panY + panH - rad}, cRim };
+        ol[4] = { {panX + panW - rad, panY + panH},    cRim };
+        ol[5] = { {panX + rad,        panY + panH},    cRim };
+        ol[6] = { {panX,              panY + panH - rad}, cRim };
+        ol[7] = { {panX,              panY + rad},     cRim };
+        ol[8] = { {panX + rad,        panY},           cRim };
+        window.draw(ol);
+
+        float iconX = panX + 10.f, textX = iconX + iconSize + 10.f, startY = panY + 8.f;
+
+        // Wood
+        if (woodTex.getSize().x > 0) woodIcon.setScale(iconSize / woodTex.getSize().x, iconSize / woodTex.getSize().y);
+        woodIcon.setPosition(iconX, startY + rowH * 0 + 4.f);
+        m_woodText.setPosition(textX, startY + rowH * 0 + 6.f);
+        window.draw(woodIcon); window.draw(m_woodText);
+
+        // Gold
+        if (goldTex.getSize().x > 0) goldIcon.setScale(iconSize / goldTex.getSize().x, iconSize / goldTex.getSize().y);
+        goldIcon.setPosition(iconX, startY + rowH * 1 + 4.f);
+        m_goldText.setPosition(textX, startY + rowH * 1 + 6.f);
+        window.draw(goldIcon); window.draw(m_goldText);
+
+        // Food
+        if (foodTex.getSize().x > 0) foodIcon.setScale(iconSize / foodTex.getSize().x, iconSize / foodTex.getSize().y);
+        foodIcon.setPosition(iconX, startY + rowH * 2 + 4.f);
+        m_foodText.setPosition(textX, startY + rowH * 2 + 6.f);
+        window.draw(foodIcon); window.draw(m_foodText);
+    }
 
     // วาด Info Panel ตอนคลิกขวา
     if (isPanelVisible) {
