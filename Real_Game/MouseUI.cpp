@@ -347,24 +347,25 @@ void MouseUI::draw(sf::RenderWindow& window) {
         ol[7] = { {panX,              panY + rad},     cRim };
         ol[8] = { {panX + rad,        panY},           cRim };
         window.draw(ol);
-    // Building City Button (ซ้ายล่าง)
-    buildingCityBtn.setPosition(20.f, screenH - 80.f);
-    buildingCityText.setPosition(30.f, screenH - 68.f);
+        // Building City Button (ซ้ายล่าง)
+        buildingCityBtn.setPosition(20.f, screenH - 80.f);
+        buildingCityText.setPosition(30.f, screenH - 68.f);
 
-    // เปลี่ยนสีปุ่มตอน active mode
-    if (m_buildingCityMode) {
-        buildingCityBtn.setFillColor(sf::Color(100, 160, 40));
-        buildingCityBtn.setOutlineColor(sf::Color(180, 255, 100));
-        buildingCityText.setFillColor(sf::Color::White);
-    }
-    else {
-        buildingCityBtn.setFillColor(sf::Color(40, 80, 30));
-        buildingCityBtn.setOutlineColor(sf::Color(120, 200, 80));
-        buildingCityText.setFillColor(sf::Color(200, 255, 150));
-    }
-    window.draw(buildingCityBtn);
-    window.draw(buildingCityText);
+        // เปลี่ยนสีปุ่มตอน active mode
+        if (m_buildingCityMode) {
+            buildingCityBtn.setFillColor(sf::Color(100, 160, 40));
+            buildingCityBtn.setOutlineColor(sf::Color(180, 255, 100));
+            buildingCityText.setFillColor(sf::Color::White);
+        }
+        else {
+            buildingCityBtn.setFillColor(sf::Color(40, 80, 30));
+            buildingCityBtn.setOutlineColor(sf::Color(120, 200, 80));
+            buildingCityText.setFillColor(sf::Color(200, 255, 150));
+        }
+        window.draw(buildingCityBtn);
+        window.draw(buildingCityText);
 
+        // เปรมทำ - วาด resource bar มุมขวาบน (ใช้ตัวแปร iconSize และ panX จากบล็อคด้านบน)
     // เปรมทำ - วาด resource bar มุมขวาบน
     float gap = 90.f;
     float startX = screenW - (gap * 3) - 20.f;

@@ -1,12 +1,12 @@
-﻿#include "AIManager.h"
+#include "AIManager.h"
 #include <cmath>
 #include <iostream>
 #include <algorithm>
 
 // ค่าใช้จ่ายอัพเกรดเมือง (ตรงกับ City.cpp)
 static const int UPGRADE_GOLD[4] = { 100, 200, 400, 800 };
-static const int UPGRADE_WOOD[4] = { 80, 150, 300, 600 };
-static const int UPGRADE_FOOD[4] = { 50, 100, 200, 400 };
+static const int UPGRADE_WOOD[4] = {  80, 150, 300, 600 };
+static const int UPGRADE_FOOD[4] = {  50, 100, 200, 400 };
 
 // ค่าใช้จ่ายเกณฑ์ทหาร (ตรงกับ main.cpp)
 static const int RECRUIT_GOLD = 20;
@@ -65,8 +65,8 @@ bool AIManager::shouldUpgradeCity(const std::vector<Unit>& units) const {
     if (aiCityLevel >= 5) return false;
     int idx = aiCityLevel - 1;
     bool hasEnoughRes = aiGold >= UPGRADE_GOLD[idx]
-        && aiWood >= UPGRADE_WOOD[idx]
-        && aiFood >= UPGRADE_FOOD[idx];
+                     && aiWood >= UPGRADE_WOOD[idx]
+                     && aiFood >= UPGRADE_FOOD[idx];
     if (!hasEnoughRes) return false;
     return countAIUnits(units) >= 1;
 }
@@ -74,16 +74,16 @@ bool AIManager::shouldUpgradeCity(const std::vector<Unit>& units) const {
 bool AIManager::shouldRecruitUnit(const std::vector<Unit>& units) const {
     if (aiGold < RECRUIT_GOLD || aiFood < RECRUIT_FOOD) return false;
     int unitCount = countAIUnits(units);
-    int maxUnits = aiCityLevel * 2;
+    int maxUnits  = aiCityLevel * 2;
     return unitCount < maxUnits;
 }
 
 // ตัดสินใจว่าถึงเวลาบุกหรือยัง
 // เงื่อนไข: ทหารที่รวมพลแล้วต้องถึงครึ่งหนึ่งของโควต้า
 bool AIManager::shouldLaunchAttack(const std::vector<Unit>& units) const {
-    int quota = aiCityLevel * 2;
+    int quota    = aiCityLevel * 2;
     int minNeeded = std::max(MIN_RALLY_RATIO_NUM, quota / MIN_RALLY_RATIO_DEN);
-    int rallied = countRalliedUnits(units);
+    int rallied  = countRalliedUnits(units);
     return rallied >= minNeeded;
 }
 
@@ -94,7 +94,7 @@ bool AIManager::processTurn(std::vector<Unit>& units, GameMap& worldMap, TurnMan
         bool aiMovedThisTick = false;
 
         int evenDir[6][2] = { {-1,-1}, {-1,0}, {0,-1}, {0,1}, {1,-1}, {1,0} };
-        int oddDir[6][2] = { {-1,0}, {-1,1}, {0,-1}, {0,1}, {1,0}, {1,1} };
+        int oddDir[6][2]  = { {-1,0}, {-1,1}, {0,-1}, {0,1}, {1,0}, {1,1} };
 
         // ================================================================
         // ช่วงที่ 1 — ตัดสินใจเชิงกลยุทธ์
@@ -127,7 +127,7 @@ bool AIManager::processTurn(std::vector<Unit>& units, GameMap& worldMap, TurnMan
             if (shouldLaunchAttack(units)) {
                 m_isAttackMode = true;
                 std::cout << "[AI] Rally complete! Launching attack with "
-                    << countRalliedUnits(units) << " units!\n";
+                          << countRalliedUnits(units) << " units!\n";
             }
         }
         else {
@@ -178,7 +178,7 @@ bool AIManager::processTurn(std::vector<Unit>& units, GameMap& worldMap, TurnMan
             else {
                 // โหมดรวมพล: ตรวจก่อนว่ารวมพลครบยัง
                 int distToRally = hexDistance(units[i].getR(), units[i].getC(), m_rallyR, m_rallyC);
-                bool isRallied = (distToRally <= RALLY_RADIUS);
+                bool isRallied  = (distToRally <= RALLY_RADIUS);
 
                 if (!isRallied) {
                     // ยังไม่ถึงจุดรวมพล → เดินไปก่อน
@@ -219,7 +219,7 @@ bool AIManager::processTurn(std::vector<Unit>& units, GameMap& worldMap, TurnMan
             }
 
             // --- หาช่องที่เดินแล้วเข้าใกล้เป้าหมายมากที่สุด ---
-            int bestR = units[i].getR(), bestC = units[i].getC();
+            int bestR    = units[i].getR(), bestC = units[i].getC();
             int bestDist = hexDistance(units[i].getR(), units[i].getC(), targetR, targetC);
 
             for (int dir = 0; dir < 6; ++dir) {
