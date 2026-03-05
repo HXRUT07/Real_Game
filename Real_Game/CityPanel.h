@@ -66,6 +66,14 @@ private:
     sf::Text textNotEnough;
     bool showNotEnough = false;
 
+    sf::RectangleShape divider4;
+
+    //Buildings section
+    sf::Text labelBuildings;       
+    sf::Text textBuildingSlots;    
+    sf::Text textBuildingRows[4];  
+    sf::Text textBuildingLimit;   
+
     // Close
     sf::RectangleShape btnClose;
     sf::Text btnCloseText;

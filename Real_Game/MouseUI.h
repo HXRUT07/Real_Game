@@ -41,6 +41,11 @@ private:
     sf::Text endTurnText;
     sf::Text turnCounterText;
 
+    // Building City Button
+    sf::RectangleShape buildingCityBtn;
+    sf::Text buildingCityText;
+    bool m_buildingCityMode = false; 
+
     // ==========================================
     // [ระบบกองทัพและการแยกทัพ]
     // ==========================================
@@ -66,6 +71,10 @@ public:
 
     // เปรมทำ - ฟังก์ชันอัปเดตทรัพยากรมุมขวาบน
     void updateResourceBar(int wood, int gold, int food);
+
+    bool isBuildingCityButtonClicked(sf::Vector2f mousePos);
+    bool isBuildingCityMode() const { return m_buildingCityMode; }
+    void setBuildingCityMode(bool val) { m_buildingCityMode = val; }
 
     // --- ฟังก์ชันคุมปุ่มแยกกองทัพ ---
     bool isSidePanelVisible() const { return m_showSidePanel; }

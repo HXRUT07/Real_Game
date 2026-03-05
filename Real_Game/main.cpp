@@ -18,6 +18,7 @@
 #include "CityPanel.h"
 #include "UpkeepManager.h" // <--- ระบบเสบียงความหิว
 #include "CombatManager.h" // <--- ระบบต่อสู้ลูกเต๋า
+#include "BuildMenu.h"
 #include "AIManager.h"    // <--- ระบบสมอง AI
 
 // ฟังก์ชันหาระยะทาง (สำหรับ AI และระบบทั่วไป)
@@ -99,6 +100,8 @@ int main() {
     CombatManager combatSys;
     if (hasCombatFont) combatSys.setFont(combatFont);
 
+    BuildMenu buildMenu(window.getSize().x, window.getSize().y);
+
     //----Unit System----//
     std::vector<Unit> units;       // เก็บยูนิตทั้งหมด
 
@@ -134,6 +137,7 @@ int main() {
             if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) window.close();
 
             cityPanel.handleEvent(event);
+            buildMenu.handleEvent(event);
 
             // 3. ส่ง Event ให้กล้องจัดการ (คลิก/ปล่อย/หมุนล้อ)
             // ล็อกกล้องตอนทอยเต๋า
@@ -223,6 +227,19 @@ int main() {
                     }
 
                     // คลิกซ้าย: ซ่อน Info Panel เดิมก่อน
+                    // BUILD CITY button -> เปิด/ปิด BuildMenu
+                    if (gui.isBuildingCityButtonClicked(uiPos) && isGameRunning) {
+                        if (buildMenu.isOpen()) {
+                            buildMenu.clear();
+                        }
+                        else {
+                            City* myCity = worldMap.getFirstCity();
+                            if (myCity) buildMenu.setCity(myCity);
+                        }
+                        sndClick.play();
+                        continue;
+                    }
+
                     gui.hideInfo();
                     activeCityUI = nullptr;
 
@@ -273,6 +290,16 @@ int main() {
                     else {
                         int r = 0, c = 0;
                         if (worldMap.getGridCoords(worldPos, r, c)) {
+
+                            if (gui.isBuildingCityMode()) {
+                                HexTile* ft = worldMap.getTile(r, c);
+                                if (ft && ft->isVisible && worldMap.getCityAt(r, c) == nullptr) {
+                                    worldMap.foundCity(r, c);   
+                                    gui.setBuildingCityMode(false);
+                                    std::cout << "New city built at " << r << "," << c << std::endl;
+                                }
+                                continue;
+                            }
 
                             HexTile* clickedTile = worldMap.getTile(r, c);
 
@@ -535,6 +562,23 @@ int main() {
         if (worldMap.isGameStarted()) {
             gui.draw(window);
         }
+        cityPanel.draw(window);
+        buildMenu.draw(window);
+
+        if (isRollingDice && hasCombatFont) {
+            float elapsed = diceAnimTimer.getElapsedTime().asSeconds();
+            sf::RectangleShape darkOverlay(sf::Vector2f((float)window.getSize().x, (float)window.getSize().y));
+            darkOverlay.setFillColor(sf::Color(0, 0, 0, 180));
+            window.draw(darkOverlay);
+
+            if (elapsed < 1.5f) {
+                displayAtkRoll = (std::rand() % 6) + 1;
+                displayDefRoll = (std::rand() % 6) + 1;
+            }
+            else {
+                displayAtkRoll = finalAtkRoll;
+                displayDefRoll = finalDefRoll;
+            }
 
         cityPanel.draw(window);
 
