@@ -345,25 +345,56 @@ void MouseUI::draw(sf::RenderWindow& window) {
         ol[7] = { {panX,              panY + rad},     cRim };
         ol[8] = { {panX + rad,        panY},           cRim };
         window.draw(ol);
-        // Building City Button (ซ้ายล่าง)
-        buildingCityBtn.setPosition(20.f, screenH - 80.f);
-        buildingCityText.setPosition(30.f, screenH - 68.f);
+        
+        // ── Building City Button Roman-style (ซ้ายล่าง) ──────
+        {
+            float bW = 180.f;   // ← ความกว้างปุ่ม  (ปรับได้)
+            float bH = 48.f;    // ← ความสูงปุ่ม   (ปรับได้)
+            float bX = 16.f;    // ← ระยะจากขอบซ้าย (ปรับได้)
+            float bY = screenH - bH - 20.f;  // ← ระยะจากขอบล่าง (ปรับได้)
+            float rad = 8.f;
 
-        // เปลี่ยนสีปุ่มตอน active mode
-        if (m_buildingCityMode) {
-            buildingCityBtn.setFillColor(sf::Color(100, 160, 40));
-            buildingCityBtn.setOutlineColor(sf::Color(180, 255, 100));
-            buildingCityText.setFillColor(sf::Color::White);
-        }
-        else {
-            buildingCityBtn.setFillColor(sf::Color(40, 80, 30));
-            buildingCityBtn.setOutlineColor(sf::Color(120, 200, 80));
-            buildingCityText.setFillColor(sf::Color(200, 255, 150));
-        }
-        window.draw(buildingCityBtn);
-        window.draw(buildingCityText);
+            // สีเปลี่ยนตาม active mode
+            sf::Color cBg = m_buildingCityMode ? sf::Color(30, 55, 15, 230) : sf::Color(12, 10, 6, 220);
+            sf::Color cRim = m_buildingCityMode ? sf::Color(120, 200, 60, 220) : sf::Color(160, 130, 45, 200); // ← สีขอบ (ปรับได้)
+            sf::Color cTxt = m_buildingCityMode ? sf::Color(180, 255, 100, 255) : sf::Color(200, 170, 90, 255); // ← สีข้อความ (ปรับได้)
 
-        // เปรมทำ - วาด resource bar มุมขวาบน (ใช้ตัวแปร iconSize และ panX จากบล็อคด้านบน)
+            // พื้นหลัง rounded
+            sf::RectangleShape bgH({ bW, bH - rad * 2 }); bgH.setPosition(bX, bY + rad); bgH.setFillColor(cBg); window.draw(bgH);
+            sf::RectangleShape bgV({ bW - rad * 2, bH }); bgV.setPosition(bX + rad, bY); bgV.setFillColor(cBg); window.draw(bgV);
+            float cx4[4] = { bX, bX + bW - rad * 2, bX, bX + bW - rad * 2 };
+            float cy4[4] = { bY, bY, bY + bH - rad * 2, bY + bH - rad * 2 };
+            for (int i = 0; i < 4; i++) { sf::CircleShape c(rad); c.setPosition(cx4[i], cy4[i]); c.setFillColor(cBg); window.draw(c); }
+
+            // ขอบโค้งมน
+            sf::VertexArray ol(sf::LineStrip, 9);
+            ol[0] = { {bX + rad,      bY},          cRim };
+            ol[1] = { {bX + bW - rad, bY},          cRim };
+            ol[2] = { {bX + bW,       bY + rad},    cRim };
+            ol[3] = { {bX + bW,       bY + bH - rad}, cRim };
+            ol[4] = { {bX + bW - rad, bY + bH},     cRim };
+            ol[5] = { {bX + rad,      bY + bH},     cRim };
+            ol[6] = { {bX,            bY + bH - rad}, cRim };
+            ol[7] = { {bX,            bY + rad},    cRim };
+            ol[8] = { {bX + rad,      bY},          cRim };
+            window.draw(ol);
+
+            // ข้อความจัดกลาง
+            sf::Text btnTxt("BUILDING CITY", font, 16);
+            btnTxt.setFillColor(cTxt);
+            btnTxt.setStyle(sf::Text::Bold);
+            btnTxt.setLetterSpacing(1.5f);
+            sf::FloatRect tb = btnTxt.getLocalBounds();
+            btnTxt.setOrigin(tb.left + tb.width / 2.f, tb.top + tb.height / 2.f);
+            btnTxt.setPosition(bX + bW / 2.f, bY + bH / 2.f);
+            window.draw(btnTxt);
+
+            // อัปเดต click bounds
+            buildingCityBtn.setPosition(bX, bY);
+            buildingCityBtn.setSize({ bW, bH });
+        }
+
+    // เปรมทำ - วาด resource bar มุมขวาบน (ใช้ตัวแปร iconSize และ panX จากบล็อคด้านบน)
     // เปรมทำ - วาด resource bar มุมขวาบน
     float gap = 90.f;
     float startX = screenW - (gap * 3) - 20.f;
