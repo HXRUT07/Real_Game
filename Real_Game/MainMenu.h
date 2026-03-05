@@ -3,104 +3,102 @@
 #include <vector>
 #include <string>
 
-// -------------------------------------------------------
-//  MenuState : ผลลัพธ์ที่ MainMenu ส่งกลับให้ main.cpp
-// -------------------------------------------------------
-enum class MenuState
-{
-    None,       // ยังอยู่ที่เมนู (ไม่ได้กดอะไร)
-    Play,       // กด PLAY
-    Settings,   // กด SETTINGS
-    Credits,    // กด CREDITS
-    Exit        // กด EXIT
-};
+enum class MenuState { None, Play, Settings, Credits, Exit };
+enum class SubScreen { Main, Settings, Credits };
 
-// -------------------------------------------------------
-//  MenuButton — ข้อมูลปุ่มแต่ละอัน
-// -------------------------------------------------------
 struct MenuButton
 {
     sf::Text      label;
-    sf::FloatRect bounds;       // bounding box สำหรับ hit-test
+    sf::FloatRect bounds;
     MenuState     action = MenuState::None;
     bool          hovered = false;
-    float         hoverAnim = 0.f;   // 0.0 → 1.0  (ใช้ lerp)
+    float         hoverAnim = 0.f;
 };
 
-// -------------------------------------------------------
-//  MainMenu
-// -------------------------------------------------------
+struct SettingItem
+{
+    std::string name;
+    int value = 50, minVal = 0, maxVal = 100, step = 10;
+    sf::Text           labelText, valueText, arrowLeft, arrowRight;
+    sf::RectangleShape trackBar, fillBar, btnLeft, btnRight;
+};
+
 class MainMenu
 {
 public:
-    // ============================================================
-    //  Constructor
-    //  window      – หน้าต่างหลักที่ main.cpp สร้างไว้
-    //  bgImagePath – path รูปพื้นหลัง  (เช่น "assets/bg.png")
-    //  fontPath    – path ฟอนต์ .ttf   (เช่น "assets/fonts/Trajan.ttf")
-    //
-    //  หากโหลดรูปไม่ได้ จะใช้พื้นหลังสีทึบแทน
-    //  หากโหลด font ไม่ได้ จะ fallback เป็น default
-    // ============================================================
     explicit MainMenu(sf::RenderWindow& window,
         const std::string& bgImagePath = "assets/background.png",
         const std::string& fontPath = "assets/fonts/Trajan Pro Regular.ttf");
-
     ~MainMenu() = default;
 
-    // ส่ง SFML Event เข้ามา (เรียกใน event-loop ของ main.cpp)
     void handleEvent(const sf::Event& event);
-
-    // อัปเดต animation  –  dt คือ delta time (วินาที)
     void update(float dt);
-
-    // วาดทุกอย่างลง window
     void draw();
-
-    // ผลลัพธ์ที่ผู้ใช้เลือก — ตรวจหลัง update() ทุกเฟรม
-    MenuState getState() const { return m_state; }
-
-    // รีเซ็ตกลับ None เมื่อต้องการแสดงเมนูอีกครั้ง
-    void resetState() { m_state = MenuState::None; }
-
     void loadVideoFrames(const std::string& folderPath, int frameCount);
 
-private:
-    void buildUI();
-    void rebuildButtonBounds();
+    MenuState getState()   const { return m_state; }
+    void      resetState() { m_state = MenuState::None; }
 
-    // --- refs & owned ---
+    int getMusicVolume() const { return m_musicVol; }
+    int getSfxVolume()   const { return m_sfxVol; }
+    int getBrightness()  const { return m_brightness; }
+
+private:
+    // build
+    void buildMainUI();
+    void buildSettingsUI();
+    void buildCreditsUI();
+    // draw
+    void drawBackground();
+    void drawMain();
+    void drawSettings();
+    void drawCredits();
+    // event
+    void handleMainEvent(const sf::Event&);
+    void handleSettingsEvent(const sf::Event&);
+    void handleCreditsEvent(const sf::Event&);
+    // update
+    void updateButtons(float dt, std::vector<MenuButton>& btns);
+    void updateSettingItems();
+
+    // ── shared ──────────────────────────────────────────
     sf::RenderWindow& m_window;
     sf::Font          m_font;
+    float             m_W = 0, m_H = 0;
+    MenuState         m_state = MenuState::None;
+    SubScreen         m_subScreen = SubScreen::Main;
 
-    // Background
+    // ── background ──────────────────────────────────────
     sf::Texture        m_bgTexture;
     sf::Sprite         m_bgSprite;
     bool               m_bgLoaded = false;
-    sf::RectangleShape m_bgFallback;   // สีทึบถ้าโหลดไม่ได้
+    sf::RectangleShape m_bgFallback;
 
-    // Dark panel (กล่องด้านขวา)
-    sf::RectangleShape m_panel;
-    sf::RectangleShape m_panelBorder;
-
-    // Title text  (ชื่อเกมมุมบนขวา)
-    sf::Text m_titleText;
-
-    // Buttons
-    std::vector<MenuButton> m_buttons;
-
-    // Thin separator lines ระหว่างปุ่ม
-    std::vector<sf::RectangleShape> m_separators;
-
-    // State
-    MenuState m_state = MenuState::None;
-
-    // Cached size
-    float m_W = 0.f, m_H = 0.f;
     std::vector<sf::Texture> m_videoFrames;
     sf::Sprite               m_videoSprite;
-    int                      m_currentFrame = 0;
-    float                    m_frameTimer = 0.f;
-    float                    m_frameDuration = 1.f / 30.f;
-    bool                     m_videoLoaded = false;
+    int   m_currentFrame = 0;
+    float m_frameTimer = 0.f;
+    const float m_frameDuration = 1.f / 30.f;
+    bool  m_videoLoaded = false;
+
+    // ── main menu panel (geometry only, no RectangleShape) ──
+    float m_mainPX = 0, m_mainPY = 0, m_mainPW = 0, m_mainPH = 0;
+    sf::Text                        m_titleText;
+    std::vector<MenuButton>         m_buttons;
+    std::vector<sf::RectangleShape> m_separators;
+
+    // ── settings ────────────────────────────────────────
+    float m_setPX = 0, m_setPY = 0, m_setPW = 0, m_setPH = 0;
+    sf::Text                 m_settingsTitle, m_settingsSubtitle;
+    sf::RectangleShape       m_settingsDivider;
+    std::vector<SettingItem> m_settingItems;
+    MenuButton               m_settingsBackBtn;
+    int m_musicVol = 70, m_sfxVol = 80, m_brightness = 100;
+
+    // ── credits ─────────────────────────────────────────
+    float m_crePX = 0, m_crePY = 0, m_crePW = 0, m_crePH = 0;
+    sf::Text              m_creditsTitle, m_creditsSubtitle;
+    sf::RectangleShape    m_creditsDivider;
+    std::vector<sf::Text> m_creditsLines;
+    MenuButton            m_creditsBackBtn;
 };

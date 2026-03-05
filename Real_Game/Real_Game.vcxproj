@@ -133,7 +133,10 @@
     </Link>
   </ItemDefinitionGroup>
   <ItemGroup>
+    <ClCompile Include="AIManager.cpp" />
     <ClCompile Include="City.cpp" />
+    <ClCompile Include="Cloud.cpp" />
+    <ClCompile Include="CombatManager.cpp" />
     <ClCompile Include="CityPanel.cpp" />
     <ClCompile Include="GameCamera.cpp" />
     <ClCompile Include="GameMap.cpp" />
@@ -145,8 +148,11 @@
     <ClCompile Include="Unit.cpp" />
   </ItemGroup>
   <ItemGroup>
+    <ClInclude Include="AIManager.h" />
     <ClInclude Include="BuildingType.h" />
     <ClInclude Include="City.h" />
+    <ClInclude Include="Cloud.h" />
+    <ClInclude Include="CombatManager.h" />
     <ClInclude Include="GameCamera.h" />
     <ClInclude Include="GameMap.h" />
     <ClInclude Include="MainMenu.h" />

@@ -9,7 +9,8 @@ MouseUI::MouseUI() {
     isPanelVisible = false;
     m_showSidePanel = false;
 
-    infoPanel.setSize(sf::Vector2f(220.f, 140.f));
+    // ขยายกรอบเผื่อใส่ข้อมูลเกณฑ์ทหาร
+    infoPanel.setSize(sf::Vector2f(270.f, 220.f));
     infoPanel.setFillColor(sf::Color(30, 30, 30, 220));
     infoPanel.setOutlineThickness(2.f);
     infoPanel.setOutlineColor(sf::Color(100, 200, 255));
@@ -50,10 +51,17 @@ MouseUI::MouseUI() {
         m_foodText.setFont(font);
         m_foodText.setCharacterSize(22);
         m_foodText.setFillColor(sf::Color::Green);
-        // เปรมทำ - จบ
+
+        // --- ปุ่มโหมดกองทัพ ---
+        modeBtn.setSize(sf::Vector2f(200.f, 40.f));
+        modeBtn.setOutlineThickness(2.f);
+        modeBtn.setOutlineColor(sf::Color::White);
+        modeText.setFont(font);
+        modeText.setCharacterSize(16);
+        modeText.setStyle(sf::Text::Bold);
+        modeText.setFillColor(sf::Color::White);
     }
 
-    // เปรมทำ - โหลด icon รูปภาพทรัพยากร
     if (woodTex.loadFromFile("wood.png")) {
         woodIcon.setTexture(woodTex);
         woodIcon.setScale(40.f / woodTex.getSize().x, 40.f / woodTex.getSize().y);
@@ -66,62 +74,39 @@ MouseUI::MouseUI() {
         foodIcon.setTexture(foodTex);
         foodIcon.setScale(40.f / foodTex.getSize().x, 40.f / foodTex.getSize().y);
     }
-    // เปรมทำ - จบ
 }
 
-// ---------------------------------------------------------
-// ส่วนจัดการ Resource Panel 
-// ---------------------------------------------------------
+
+
 void MouseUI::showResourcePanel(float windowWidth, int gold, int wood, int food) {
     isPanelVisible = true;
     m_showSidePanel = false;
 
-    float padding = 20.f;
-    float posX = windowWidth - infoPanel.getSize().x - padding;
-    float posY = padding;
-
-    infoPanel.setPosition(posX, posY);
-    infoContent.setPosition(posX + 14.f, posY + 12.f);
-
-    infoContent.setString(
-        "Resources in this area\n"
-        "\n"
+    // แก้ไขบัคเพื่อนลืมใส่วงเล็บปิด
+    m_targetResourceStr =
+        "--- TILE RESOURCES ---\n\n"
         "Gold : " + std::to_string(gold) + "\n" +
         "Wood : " + std::to_string(wood) + "\n" +
-        "Food : " + std::to_string(food)
-    );
+        "Food : " + std::to_string(food);
 }
 
-// ---------------------------------------------------------
-// โชว์หน้าต่างคลังหลวงของเมือง
-// ---------------------------------------------------------
 void MouseUI::showCityResourcePanel(float windowWidth, int gold, int wood, int food) {
     isPanelVisible = true;
     m_showSidePanel = false;
 
-    float padding = 20.f;
-    float posX = windowWidth - infoPanel.getSize().x - padding;
-    float posY = padding;
-
-    infoPanel.setPosition(posX, posY);
-    infoContent.setPosition(posX + 14.f, posY + 12.f);
-
-    infoContent.setString(
+    m_targetResourceStr =
         "--- CITY STOCKPILE ---\n"
-        "\n"
-        "Gold : " + std::to_string(gold) + "\n" +
-        "Wood : " + std::to_string(wood) + "\n" +
-        "Food : " + std::to_string(food)
-    );
+        "Gold : " + std::to_string(gold) + "\n"
+        "Wood : " + std::to_string(wood) + "\n"
+        "Food : " + std::to_string(food) + "\n\n"
+        "[1] Swordsman (20G, 50F)\n"
+        "[2] Cavalry (50G, 50W, 50F)";
 }
 
 void MouseUI::hideInfo() {
     isPanelVisible = false;
 }
 
-// ---------------------------------------------------------
-// ส่วนจัดการ Side Panel
-// ---------------------------------------------------------
 void MouseUI::setSelectionList(const std::vector<Unit*>& units) {
     m_selectedUnits = units;
     m_showSidePanel = !units.empty();
@@ -136,13 +121,8 @@ void MouseUI::clearSelection() {
     m_showSidePanel = false;
 }
 
-void MouseUI::update(sf::Vector2f mousePos) {
-    // ยังไม่ต้องทำอะไร
-}
+void MouseUI::update(sf::Vector2f mousePos) {}
 
-// ---------------------------------------------------------
-// อัปเดตเลขเทิร์น
-// ---------------------------------------------------------
 void MouseUI::updateTurnInfo(int playerTurn, int turnNumber) {
     if (!hasFont) return;
 
@@ -163,9 +143,6 @@ bool MouseUI::isEndTurnButtonClicked(sf::Vector2f mousePos) {
     return endTurnBtn.getGlobalBounds().contains(mousePos);
 }
 
-// ---------------------------------------------------------
-// เปรมทำ - อัปเดตค่าทรัพยากรมุมขวาบน
-// ---------------------------------------------------------
 void MouseUI::updateResourceBar(int wood, int gold, int food) {
     m_wood = wood;
     m_gold = gold;
@@ -174,24 +151,81 @@ void MouseUI::updateResourceBar(int wood, int gold, int food) {
     m_goldText.setString(std::to_string(gold));
     m_foodText.setString(std::to_string(food));
 }
-// เปรมทำ - จบ
 
-// ---------------------------------------------------------
-// Draw Function
-// ---------------------------------------------------------
+bool MouseUI::isModeButtonClicked(sf::Vector2f mousePos) {
+    if (!m_showSidePanel) return false;
+    return modeBtn.getGlobalBounds().contains(mousePos);
+}
+
+int MouseUI::getClickedItemIndex(sf::Vector2f mousePos) {
+    if (!m_showSidePanel) return -1;
+    for (size_t i = 0; i < itemRects.size(); ++i) {
+        if (itemRects[i].contains(mousePos)) return (int)i;
+    }
+    return -1;
+}
+
 void MouseUI::draw(sf::RenderWindow& window) {
     if (!hasFont) return;
-
-    window.draw(turnCounterText);
 
     float screenW = (float)window.getSize().x;
     float screenH = (float)window.getSize().y;
 
-    endTurnBtn.setPosition(screenW - 190.f, screenH - 80.f);
-    endTurnText.setPosition(screenW - 165.f, screenH - 70.f);
+    window.draw(turnCounterText);
 
-    window.draw(endTurnBtn);
-    window.draw(endTurnText);
+    {
+        float cx = screenW - 70.f;
+        float cy = screenH - 80.f;
+        float R = 46.f;
+
+        bool isP1 = (endTurnBtn.getFillColor() != sf::Color(80, 80, 80));
+        sf::Color cRim = isP1 ? sf::Color(200, 165, 55, 220) : sf::Color(100, 100, 100, 180);
+        sf::Color cBody = isP1 ? sf::Color(40, 32, 20, 235) : sf::Color(60, 60, 60, 220);
+        sf::Color cCore = isP1 ? sf::Color(25, 20, 12, 225) : sf::Color(40, 40, 40, 210);
+
+        sf::CircleShape rim(R);
+        rim.setOrigin(R, R); rim.setPosition(cx, cy);
+        rim.setFillColor(cRim);
+        window.draw(rim);
+
+        sf::CircleShape body(R * 0.84f);
+        body.setOrigin(R * 0.84f, R * 0.84f); body.setPosition(cx, cy);
+        body.setFillColor(cBody);
+        window.draw(body);
+
+        sf::CircleShape ring(R * 0.84f);
+        ring.setOrigin(R * 0.84f, R * 0.84f); ring.setPosition(cx, cy);
+        ring.setFillColor(sf::Color::Transparent);
+        ring.setOutlineThickness(1.5f);
+        ring.setOutlineColor(sf::Color(180, 145, 50, 160));
+        window.draw(ring);
+
+        sf::CircleShape core(R * 0.60f);
+        core.setOrigin(R * 0.60f, R * 0.60f); core.setPosition(cx, cy);
+        core.setFillColor(cCore);
+        core.setOutlineThickness(1.f);
+        core.setOutlineColor(cRim);
+        window.draw(core);
+
+        sf::Text icon(">", font, (unsigned)(R * 0.60f * 0.9f));
+        icon.setFillColor(cRim); icon.setStyle(sf::Text::Bold);
+        sf::FloatRect ib = icon.getLocalBounds();
+        icon.setOrigin(ib.left + ib.width / 2.f, ib.top + ib.height / 2.f);
+        icon.setPosition(cx, cy - R * 0.60f * 0.05f);
+        window.draw(icon);
+
+        sf::Text lbl(isP1 ? "END TURN" : "AI TURN", font, (unsigned)(R * 0.34f));
+        lbl.setFillColor(isP1 ? sf::Color(230, 210, 160, 255) : sf::Color(130, 130, 130, 255));
+        lbl.setStyle(sf::Text::Bold); lbl.setLetterSpacing(1.5f);
+        sf::FloatRect lb = lbl.getLocalBounds();
+        lbl.setOrigin(lb.left + lb.width / 2.f, lb.top);
+        lbl.setPosition(cx, cy + R + 6.f);
+        window.draw(lbl);
+
+        // อัปเดต bounds สำหรับ click detection (ใช้แทน endTurnBtn เดิม)
+        endTurnBtn.setPosition(cx - R, cy - R);
+        endTurnBtn.setSize({ R * 2,R * 2 });
+    }
 
     // เปรมทำ - วาด resource bar มุมขวาบน
     float iconSize = 40.f;
@@ -202,58 +236,69 @@ void MouseUI::draw(sf::RenderWindow& window) {
 
     woodIcon.setPosition(startX, iconY);
     m_woodText.setPosition(startX + 5.f, textY);
-
     goldIcon.setPosition(startX + gap, iconY);
     m_goldText.setPosition(startX + gap + 5.f, textY);
-
     foodIcon.setPosition(startX + gap * 2, iconY);
     m_foodText.setPosition(startX + gap * 2 + 5.f, textY);
 
-    window.draw(woodIcon);
-    window.draw(m_woodText);
-    window.draw(goldIcon);
-    window.draw(m_goldText);
-    window.draw(foodIcon);
-    window.draw(m_foodText);
-    // เปรมทำ - จบ
+    window.draw(woodIcon); window.draw(m_woodText);
+    window.draw(goldIcon); window.draw(m_goldText);
+    window.draw(foodIcon); window.draw(m_foodText);
 
+    // วาด Info Panel ตอนคลิกขวา
     if (isPanelVisible) {
+        float panelW = 270.f;
+        float padding = 20.f;
+        infoPanel.setPosition(screenW - panelW - padding, padding + 80.f);
         window.draw(infoPanel);
-        window.draw(infoContent);
+
+        sf::Text targetText(m_targetResourceStr, font, 18);
+        targetText.setFillColor(sf::Color::Cyan);
+        targetText.setPosition(infoPanel.getPosition().x + 15.f, infoPanel.getPosition().y + 15.f);
+        window.draw(targetText);
     }
 
     if (m_showSidePanel) {
-        float panelWidth = 220.0f;
+        float panelW = 220.0f; // แก้บัคเพื่อนพิมพ์ผิดเป็น panelWidth
 
-        sf::RectangleShape bg(sf::Vector2f(panelWidth, screenH));
-        bg.setPosition(screenW - panelWidth, 0);
+        sf::RectangleShape bg(sf::Vector2f(panelW, screenH));
+        bg.setPosition(screenW - panelW, 0);
         bg.setFillColor(sf::Color(20, 20, 20, 200));
         bg.setOutlineColor(sf::Color(100, 100, 100));
         bg.setOutlineThickness(-2.0f);
-
         window.draw(bg);
 
-        sf::Text title("Selected Group", font, 22);
-        title.setPosition(screenW - panelWidth + 15, 20);
+        sf::Text title("Selected Units", font, 22);
+        title.setPosition(screenW - panelW + 15, 100);
         title.setFillColor(sf::Color::Yellow);
         title.setStyle(sf::Text::Bold);
         window.draw(title);
 
-        sf::RectangleShape line(sf::Vector2f(panelWidth - 30, 2));
-        line.setPosition(screenW - panelWidth + 15, 55);
+        sf::RectangleShape line(sf::Vector2f(panelW - 30, 2));
+        line.setPosition(screenW - panelW + 15, 135);
         line.setFillColor(sf::Color(100, 100, 100));
         window.draw(line);
 
-        float startY = 70.0f;
-        for (const auto* u : m_selectedUnits) {
-            std::string status = u->getName();
-            std::string apText = "AP: " + std::to_string(u->getCurrentAP()) + " / " + std::to_string(u->getMaxAP());
+        itemRects.clear();
+        float startY = 150.0f;
+        for (size_t i = 0; i < m_selectedUnits.size(); ++i) {
+            auto* u = m_selectedUnits[i];
 
-            sf::Text nameText(status, font, 18);
-            nameText.setPosition(screenW - panelWidth + 20, startY);
+            sf::FloatRect clickBounds(screenW - panelW + 10.f, startY - 5.f, 200.f, 50.f);
+            itemRects.push_back(clickBounds);
 
-            sf::Text subText(apText, font, 14);
-            subText.setPosition(screenW - panelWidth + 20, startY + 22);
+            if (!m_isArmyMode && (int)i == m_selectedIndex) {
+                sf::RectangleShape highlightBg(sf::Vector2f(200.f, 50.f));
+                highlightBg.setPosition(clickBounds.left, clickBounds.top);
+                highlightBg.setFillColor(sf::Color(150, 150, 0, 100));
+                window.draw(highlightBg);
+            }
+
+            sf::Text nameText(u->getName(), font, 18);
+            nameText.setPosition(screenW - panelW + 20, startY);
+
+            sf::Text subText("AP: " + std::to_string(u->getCurrentAP()) + " / " + std::to_string(u->getMaxAP()), font, 14);
+            subText.setPosition(screenW - panelW + 20, startY + 22);
 
             if (u->hasAP()) {
                 nameText.setFillColor(sf::Color::White);
@@ -264,10 +309,20 @@ void MouseUI::draw(sf::RenderWindow& window) {
                 subText.setFillColor(sf::Color::Cyan);
             }
 
-            window.draw(nameText);
-            window.draw(subText);
-
+            window.draw(nameText); window.draw(subText);
             startY += 60.0f;
         }
+
+        modeBtn.setPosition(screenW - panelW + 10.f, screenH - 140.f);
+        if (m_isArmyMode) {
+            modeBtn.setFillColor(sf::Color(50, 150, 50));
+            modeText.setString("MODE: ARMY (ALL)");
+        }
+        else {
+            modeBtn.setFillColor(sf::Color(200, 100, 50));
+            modeText.setString("MODE: SPLIT (1)");
+        }
+        modeText.setPosition(modeBtn.getPosition().x + 20.f, modeBtn.getPosition().y + 10.f);
+        window.draw(modeBtn); window.draw(modeText);
     }
 }
