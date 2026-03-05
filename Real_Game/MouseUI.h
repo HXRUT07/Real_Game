@@ -30,6 +30,7 @@ private:
     sf::Text m_woodText;
     sf::Text m_goldText;
     sf::Text m_foodText;
+    // เปรมทำ - จบ
 
     // --- ส่วนแถบขวา (Side Panel) ---
     bool m_showSidePanel = false;
@@ -71,7 +72,7 @@ public:
     void toggleArmyMode() { m_isArmyMode = !m_isArmyMode; }
     bool isArmyMode() const { return m_isArmyMode; }
     void setArmyMode(bool mode) { m_isArmyMode = mode; }
-    void setSelectedIndex(int idx) { m_selectedIndex = idx; m_isArmyMode = false; }
+    void setSelectedIndex(int idx) { m_selectedIndex = idx; }
     int getSelectedIndex() const { return m_selectedIndex; }
     bool isModeButtonClicked(sf::Vector2f mousePos);
     int getClickedItemIndex(sf::Vector2f mousePos);

@@ -146,6 +146,7 @@
     <ClCompile Include="ResourceManage.cpp" />
     <ClCompile Include="TurnManager.cpp" />
     <ClCompile Include="Unit.cpp" />
+    <ClCompile Include="UpkeepManager.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="AIManager.h" />
@@ -160,6 +161,7 @@
     <ClInclude Include="ResourceManage.h" />
     <ClInclude Include="TurnManager.h" />
     <ClInclude Include="Unit.h" />
+    <ClInclude Include="UpkeepManager.h" />
   </ItemGroup>
   <ItemGroup>
     <Image Include="Blue Castle.png" />

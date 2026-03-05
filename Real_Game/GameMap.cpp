@@ -206,6 +206,60 @@ void GameMap::revealFog(int centerR, int centerC, int sightRange) {
     if (changed) updateColors();
 }
 
+// ========================================================================
+// ระบบกวาดสายตา: เปิดหมอกให้ทหารทุกตัวและเมืองบนแผนที่พร้อมกัน
+// ========================================================================
+void GameMap::updateVision(const std::vector<Unit>& units, int currentPlayer) {
+    // 1. ปิดหมอกทั้งหมดก่อน
+    for (auto& tile : tiles) {
+        tile.isVisible = false;
+    }
+
+    // 2. เปิดหมอกให้เมืองของเราทุกเมือง 
+    for (auto& city : cities) {
+        int centerR = city->getR();
+        int centerC = city->getC();
+
+        for (auto& tile : tiles) {
+            int r1 = centerR;
+            int c1 = centerC - (centerR - (centerR & 1)) / 2;
+            int r2 = tile.gridR;
+            int c2 = tile.gridC - (tile.gridR - (tile.gridR & 1)) / 2;
+            int dist = (std::abs(r1 - r2) + std::abs(c1 - c2) + std::abs((r1 - r2) + (c1 - c2))) / 2;
+
+            if (dist <= 1) {
+                tile.isExplored = true;
+                tile.isVisible = true;
+            }
+        }
+    }
+
+    // 3. เปิดหมอกรอบทหารของเรา "ทุกตัว" บนกระดาน
+    for (const auto& u : units) {
+        if (u.getOwner() == currentPlayer) {
+            int centerR = u.getR();
+            int centerC = u.getC();
+
+            for (auto& tile : tiles) {
+                if (tile.isVisible) continue; // ถ้าช่องนี้สว่างแล้วให้ข้ามเลย (ประหยัด CPU)
+
+                int r1 = centerR;
+                int c1 = centerC - (centerR - (centerR & 1)) / 2;
+                int r2 = tile.gridR;
+                int c2 = tile.gridC - (tile.gridR - (tile.gridR & 1)) / 2;
+                int dist = (std::abs(r1 - r2) + std::abs(c1 - c2) + std::abs((r1 - r2) + (c1 - c2))) / 2;
+
+                if (dist <= u.getSightRange()) {
+                    tile.isExplored = true;
+                    tile.isVisible = true;
+                }
+            }
+        }
+    }
+
+    updateColors();
+}
+
 void GameMap::calculateValidMoves(int startR, int startC, int moveRange) {
     clearHighlight();
 

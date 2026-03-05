@@ -16,6 +16,8 @@
 #include "TurnManager.h" // <--- ระบบเทิร์น
 #include "MainMenu.h" //<--- ระบบเมนูหลัก
 #include "CityPanel.h"
+#include "UpkeepManager.h" // <--- ระบบเสบียงความหิว
+#include "CombatManager.h" // <--- ระบบต่อสู้ลูกเต๋า
 
 // ฟังก์ชันหาระยะทาง (สำหรับ AI และระบบทั่วไป)
 int getHexDistance(int r1, int c1, int r2, int c2) {
@@ -89,8 +91,12 @@ int main() {
     // 2. สร้าง Object กล้อง
     GameCamera camera(window.getSize().x, window.getSize().y);
 
-    MouseUI gui; //(PLAY)  <--- ลบตัวที่ซ้ำออกให้แล้วครับ
+    MouseUI gui; //(PLAY)
     CityPanel cityPanel(window.getSize().x, window.getSize().y);
+
+    // --- ระบบต่อสู้ ---
+    CombatManager combatSys;
+    if (hasCombatFont) combatSys.setFont(combatFont);
 
     //----Unit System----//
     std::vector<Unit> units;       // เก็บยูนิตทั้งหมด
@@ -98,60 +104,55 @@ int main() {
     // จองพื้นที่ล่วงหน้า 1,000 ตัว ป้องกันบัค C++ ย้ายที่อยู่หน่วยความจำ (Memory Dangling)
     units.reserve(1000);
 
-    Unit* selectedUnit = nullptr;
-    bool isGameRunning = false;
-    int unitNameCounter = 1;
-    TurnManager turnSys(2);
+    Unit* selectedUnit = nullptr;  // ตัวที่กำลังเลือกอยู่
+    bool isGameRunning = false;    // ตัวแปรเช็คว่าจบช่วงเลือกจุดเกิดหรือยัง
+    int unitNameCounter = 1;       // ตัวนับสำหรับตั้งชื่อ Unit อัตโนมัติ
+    TurnManager turnSys(2); // สร้างระบบเทิร์นสำหรับ 2 ผู้เล่น
 
+    // --- ตัวแปรเก็บจำนวนเทิร์นที่ผ่านไป ---
     int currentTurnNumber = 1;
 
+    // --- ตัวแปรสำหรับระบบกองทัพ (Army) ---
     std::vector<Unit*> currentStack;
     Unit* leadUnit = nullptr;
-    City* activeCityUI = nullptr;
 
+    City* activeCityUI = nullptr; // ตัวแปรจดจำเมืองที่เรากำลังเปิดดูอยู่ (เพื่อเอาไว้สร้างทหาร)
+
+    // --- ตัวแปรสมอง AI ---
     sf::Clock aiTimer;
     int aiBaseR = 0, aiBaseC = 0;
     int aiGold = 0, aiWood = 0, aiFood = 0;
     int aiCityLevel = 1;
 
-    bool isRollingDice = false;
-    sf::Clock diceAnimTimer;
-    int finalAtkRoll = 0, finalDefRoll = 0;
-    int displayAtkRoll = 1, displayDefRoll = 1;
-    int atkStartR = -1, atkStartC = -1;
-    int defTargetR = -1, defTargetC = -1;
-    int currentAttackerOwner = 1;
-    bool isArmyAttack = true;
-
-    auto rollDiceRisk = [](int numDice) {
-        int highest = 0;
-        for (int i = 0; i < numDice; i++) {
-            int roll = (std::rand() % 6) + 1;
-            if (roll > highest) highest = roll;
-        }
-        return highest;
-        };
-
     while (window.isOpen()) {
         sf::Vector2f mousePosScreen = window.mapPixelToCoords(sf::Mouse::getPosition(window));
         sf::Event event;
 
+        // [จุดแก้ไข] ลูป pollEvent จะจบแค่ตรงที่เช็คปุ่ม/เมาส์ เท่านั้น
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) window.close();
+
+            // กด Escape เพื่อออกจากเกมได้ (สำคัญมากตอนเทส Fullscreen ไม่งั้นออกยาก)
             if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) window.close();
 
             cityPanel.handleEvent(event);
 
             // 3. ส่ง Event ให้กล้องจัดการ (คลิก/ปล่อย/หมุนล้อ)
-            if (!isRollingDice) {
+            // ล็อกกล้องตอนทอยเต๋า
+            if (!combatSys.isCombatActive()) {
                 camera.handleEvent(event, window);
             }
 
-            if (event.type == sf::Event::MouseButtonPressed && turnSys.getCurrentPlayer() == 1 && !isRollingDice) {
+            // -----------------------------------------------------------------------
+            // ส่วนตรวจสอบการคลิกซ้าย: เลือกจุดเกิด (Spawn) และ ควบคุมยูนิต (Gameplay)
+            // -----------------------------------------------------------------------
+            // อนุญาตให้ผู้เล่นคลิกเมาส์สั่งการได้ เฉพาะตอนเป็นตาของ Player 1 เท่านั้น
+            if (event.type == sf::Event::MouseButtonPressed && turnSys.getCurrentPlayer() == 1 && !combatSys.isCombatActive()) {
                 sf::Vector2i pixelPos = sf::Mouse::getPosition(window);
                 sf::Vector2f worldPos = window.mapPixelToCoords(pixelPos, camera.getView());
-                sf::Vector2f uiPos = window.mapPixelToCoords(pixelPos, window.getDefaultView());
+                sf::Vector2f uiPos = window.mapPixelToCoords(pixelPos, window.getDefaultView()); // ตำแหน่งสำหรับ UI
 
+                // เช็คคลิก UI แยกทัพด้านขวาก่อน
                 if (gui.isSidePanelVisible() && uiPos.x > window.getSize().x - 220.f) {
                     if (gui.isModeButtonClicked(uiPos)) {
                         gui.toggleArmyMode();
@@ -162,6 +163,8 @@ int main() {
                     if (clickedIdx != -1) {
                         gui.setSelectedIndex(clickedIdx);
                         leadUnit = currentStack[clickedIdx];
+                        // ล้างไฮไลท์เก่าก่อนแสดงระยะเดินของตัวที่เลือกแยก (Individual Movement)
+                        worldMap.clearHighlight();
                         worldMap.calculateValidMoves(leadUnit->getR(), leadUnit->getC(), leadUnit->getMoveRange());
                         sndClick.play();
                         continue;
@@ -169,25 +172,35 @@ int main() {
                 }
 
                 if (event.mouseButton.button == sf::Mouse::Right) {
+                    // 1. ยกเลิกการเลือกทหารและไฮไลท์
                     gui.clearSelection(); leadUnit = nullptr; currentStack.clear(); worldMap.clearHighlight();
-                    activeCityUI = nullptr;
+                    activeCityUI = nullptr; // เคลียร์เมืองที่เลือกอยู่
 
+                    // 2. ดึงข้อมูลทรัพยากรจากช่องที่คลิก
                     int r = 0, c = 0;
                     if (worldMap.getGridCoords(worldPos, r, c)) {
+
+                        // --- [อัปเดตระบบใหม่] เช็คก่อนว่ามีเมืองอยู่ตรงนี้ไหม ---
                         City* clickedCity = worldMap.getCityAt(r, c);
                         if (clickedCity != nullptr) {
                             // ถ้ามีเมือง ให้โชว์หน้าต่างคลังหลวงของเมือง (CITY STOCKPILE)
+                            activeCityUI = clickedCity;
                             cityPanel.setCity(clickedCity);
                             gui.hideInfo();
                         }
                         else {
                             cityPanel.clear();
+                            // ถ้าไม่มีเมือง ค่อยไปดึงข้อมูลทรัพยากรบนพื้นดินปกติ
                             HexTile* clickedTile = worldMap.getTile(r, c);
+
+                            // กฎ: ต้องมีช่องนี้อยู่จริง และ "ต้องเคยสำรวจแล้ว (isExplored)" เท่านั้น
                             if (clickedTile != nullptr && clickedTile->isExplored) {
+                                // โชว์ข้อมูลทรัพยากรของช่องนั้น
                                 gui.showResourcePanel((float)window.getSize().x,
                                     clickedTile->gold, clickedTile->wood, clickedTile->food);
                             }
                             else {
+                                // ถ้าคลิกขวาใส่หมอกดำๆ ให้ปิดหน้าต่างทิ้ง
                                 gui.hideInfo();
                             }
                         }
@@ -195,28 +208,41 @@ int main() {
                 }
                 else if (event.mouseButton.button == sf::Mouse::Left) {
 
+                    // ---  เช็คก่อนเลยว่าคลิกโดนปุ่ม "END TURN" หรือเปล่า? ---
                     if (gui.isEndTurnButtonClicked(uiPos) && isGameRunning) {
                         sndClick.play();
                         turnSys.endTurn(units);
+
+                        // --- [NEW] ประมวลผลความหิวของ AI ทันทีที่ผู้เล่นกด Enter จบเทิร์น ---
+                        UpkeepManager::processAIUpkeep(units, aiFood);
+
+                        // เคลียร์ UI ที่เลือกค้างไว้
                         gui.clearSelection(); leadUnit = nullptr; currentStack.clear(); worldMap.clearHighlight();
                         activeCityUI = nullptr;
                         aiTimer.restart();
                         std::cout << ">>> Switched to AI (Player 2) <<<" << std::endl;
-                        continue;
+                        continue; // ข้ามการทำงานด้านล่างไปเลย เพราะคลิกปุ่มไปแล้ว
                     }
 
+                    // คลิกซ้าย: ซ่อน Info Panel เดิมก่อน
                     gui.hideInfo();
                     activeCityUI = nullptr;
 
+                    // --- PHASE 1: เลือกจุดเกิด ---
                     if (!worldMap.isGameStarted()) {
+                        // 3. ส่งให้ GameMap จัดการเลือกจุดเกิด
                         worldMap.handleMouseClick(worldPos);
 
+                        // เช็คว่า Map เริ่มเกมสำเร็จหรือยัง?
                         if (worldMap.isGameStarted()) {
                             isGameRunning = true;
+
+                            // *** Spawn ทหารตัวแรกตรงจุดที่คลิก ***
                             int spawnR = 0, spawnC = 0;
                             if (worldMap.getGridCoords(worldPos, spawnR, spawnC)) {
                                 sndMove.play();
-                                units.emplace_back("Commander", spawnR, spawnC, 1);
+                                // ใช้ทหารชื่อ Swordsman เพื่อไม่ให้บัคภาพล่องหน
+                                units.emplace_back("Swordsman", spawnR, spawnC, 1);
 
                                 // --- ยัด Starter Pack ให้เมืองหลวงทันที! ---
                                 City* myCity = worldMap.getFirstCity();
@@ -228,6 +254,7 @@ int main() {
                                     std::cout << "Received Starter Pack: " << starter.gold << "G " << starter.wood << "W " << starter.food << "F!" << std::endl;
                                 }
 
+                                // สุ่มหาจุดเกิดให้ AI ให้ไกล 15-30 ช่อง
                                 int enemyR = spawnR, enemyC = spawnC;
                                 int attempts = 0;
                                 while (attempts < 1000) {
@@ -244,6 +271,7 @@ int main() {
                             }
                         }
                     }
+                    // --- PHASE 2: ควบคุมทหาร (Gameplay) ---
                     else {
                         int r = 0, c = 0;
                         if (worldMap.getGridCoords(worldPos, r, c)) {
@@ -254,6 +282,7 @@ int main() {
                                 gui.clearSelection(); leadUnit = nullptr; currentStack.clear(); worldMap.clearHighlight();
                             }
                             else {
+                                // 1. หา Unit ทั้งหมดที่อยู่ในช่องนี้ (Stacking)
                                 std::vector<Unit*> stackInTile;
                                 bool hasOurUnit = false;
                                 for (auto& u : units) {
@@ -263,26 +292,19 @@ int main() {
                                     }
                                 }
 
+                                // 1. กรณีที่มีตัวละครถูกเลือกอยู่แล้ว (กำลังจะเดิน หรือ โจมตี)
                                 if (leadUnit != nullptr && worldMap.isValidMove(r, c)) {
                                     auto enemyIt = std::find_if(units.begin(), units.end(), [&](Unit& u) { return u.getR() == r && u.getC() == c && u.getOwner() != turnSys.getCurrentPlayer(); });
 
                                     if (enemyIt != units.end()) {
-                                        atkStartR = leadUnit->getR(); atkStartC = leadUnit->getC();
-                                        defTargetR = r; defTargetC = c;
-                                        currentAttackerOwner = 1;
-                                        isArmyAttack = gui.isArmyMode();
-
-                                        finalAtkRoll = rollDiceRisk(3);
-                                        finalDefRoll = rollDiceRisk(2);
-
-                                        isRollingDice = true;
-                                        diceAnimTimer.restart();
-                                        sndDice.play();
+                                        // สั่งโจมตี! เรียกใช้ CombatManager
+                                        combatSys.initiateCombat(leadUnit->getR(), leadUnit->getC(), r, c, 1, sndDice, gui.isArmyMode());
 
                                         gui.clearSelection(); worldMap.clearHighlight();
                                         leadUnit = nullptr; currentStack.clear();
                                     }
                                     else {
+                                        // เดิน!
                                         if (gui.isArmyMode()) {
                                             for (auto* u : currentStack) {
                                                 if (u->hasAP() && u->getOwner() == 1) {
@@ -315,18 +337,27 @@ int main() {
                                         leadUnit = nullptr; currentStack.clear();
                                     }
                                 }
+                                // 2. กรณีที่คลิกใส่ช่องที่มีตัวละครของเรา (เพื่อเลือกตัวละครใหม่) -- *จุดแก้บักโชว์ระยะเดินผิดตัว*
                                 else if (!stackInTile.empty() && hasOurUnit) {
+                                    // ล้างไฮไลท์เก่าทิ้งก่อนทุกครั้งที่เลือกใหม่ เพื่อป้องกันเงาระยะเดินตัวเก่าค้าง
+                                    worldMap.clearHighlight();
+
                                     currentStack = stackInTile;
                                     gui.setSelectionList(currentStack);
-                                    gui.setArmyMode(true);
+                                    gui.setSelectedIndex(0);
+                                    gui.setArmyMode(true); // Default เป็น Army Mode เสมอเวลาคลิกเลือกก้อนทหาร
 
                                     leadUnit = nullptr;
                                     for (auto* u : currentStack) {
+                                        // หาตัวแรกที่มี AP เพื่อตั้งเป็น Leader และคำนวณระยะเดินจากตัวนั้นจริงๆ
                                         if (u->hasAP() && u->getOwner() == turnSys.getCurrentPlayer()) { leadUnit = u; break; }
                                     }
+
+                                    // โชว์ระยะเดินเฉพาะของตัวที่ถูกเลือกเป็น Leader (Respect individual MoveRange)
                                     if (leadUnit) worldMap.calculateValidMoves(leadUnit->getR(), leadUnit->getC(), leadUnit->getMoveRange());
-                                    else worldMap.clearHighlight();
+                                    else worldMap.clearHighlight(); // ถ้าหมด AP ทั้งกอง ก็ไม่ต้องโชว์ระยะ
                                 }
+                                // 3. กรณีคลิกพื้นว่างเปล่า โดยไม่ได้เลือกใครไว้
                                 else {
                                     gui.clearSelection(); leadUnit = nullptr; currentStack.clear(); worldMap.clearHighlight();
                                 }
@@ -336,12 +367,18 @@ int main() {
                 }
             }
 
-            if (event.type == sf::Event::KeyPressed && !isRollingDice) {
+            // =======================================================================
+            // [DEBUG / TEST] ระบบเทสคีย์บอร์ด (ปุ่มเสกทหารแบบ RISK)
+            // =======================================================================
+            if (event.type == sf::Event::KeyPressed && !combatSys.isCombatActive()) {
+
+                // R: รีเซ็ต AP ของทุก Unit (จำลองการจบ Turn)
                 if (event.key.code == sf::Keyboard::R) {
                     for (auto& u : units) u.resetAP();
                     std::cout << "Next Turn: All AP Reset" << std::endl;
                 }
 
+                // [ปุ่มเสกทหารสำหรับ TEST] กด '+' หรือ '=' เสกทหารฟรีๆ ที่เมืองหลวง!
                 if (event.key.code == sf::Keyboard::Add || event.key.code == sf::Keyboard::Equal) {
                     City* myCity = worldMap.getFirstCity();
                     if (myCity != nullptr) {
@@ -351,6 +388,28 @@ int main() {
                     }
                 }
 
+                // [NEW] ระบบเสกทหารตรงจุดที่เมาส์ชี้ (Debug Spawn) เอาไว้เทส
+                if (event.key.code == sf::Keyboard::Z || event.key.code == sf::Keyboard::X || event.key.code == sf::Keyboard::C) {
+                    sf::Vector2i pixelPos = sf::Mouse::getPosition(window);
+                    sf::Vector2f worldPos = window.mapPixelToCoords(pixelPos, camera.getView());
+                    int r = 0, c = 0;
+                    if (worldMap.getGridCoords(worldPos, r, c)) {
+                        if (event.key.code == sf::Keyboard::Z) {
+                            units.emplace_back("Swordsman", r, c, 1);
+                            sndMove.play();
+                        }
+                        else if (event.key.code == sf::Keyboard::X) {
+                            for (int i = 0; i < 5; i++) units.emplace_back("Swordsman", r, c, 1);
+                            sndMove.play();
+                        }
+                        else if (event.key.code == sf::Keyboard::C) {
+                            units.emplace_back("Enemy", r, c, 2);
+                            sndMove.play();
+                        }
+                    }
+                }
+
+                // ปุ่มเกณฑ์ทหารจากเมือง
                 if (activeCityUI != nullptr && turnSys.getCurrentPlayer() == 1) {
                     if (event.key.code == sf::Keyboard::Num1 || event.key.code == sf::Keyboard::Numpad1) {
                         if (activeCityUI->getGold() >= 20 && activeCityUI->getFood() >= 50) {
@@ -358,26 +417,31 @@ int main() {
                             activeCityUI->addFood(-50);
                             units.emplace_back("Swordsman", activeCityUI->getR(), activeCityUI->getC(), 1);
                             sndMove.play();
-                            gui.showCityResourcePanel((float)window.getSize().x, activeCityUI->getGold(), activeCityUI->getWood(), activeCityUI->getFood());
                         }
                     }
+                    // แพ็กเกจใหญ่ ซื้อทีละ 5 ตัว!
                     else if (event.key.code == sf::Keyboard::Num2 || event.key.code == sf::Keyboard::Numpad2) {
-                        if (activeCityUI->getGold() >= 50 && activeCityUI->getWood() >= 50 && activeCityUI->getFood() >= 50) {
-                            activeCityUI->addGold(-50); activeCityUI->addWood(-50); activeCityUI->addFood(-50);
-                            units.emplace_back("Cavalry", activeCityUI->getR(), activeCityUI->getC(), 1);
+                        if (activeCityUI->getGold() >= 100 && activeCityUI->getFood() >= 250) {
+                            activeCityUI->addGold(-100);
+                            activeCityUI->addFood(-250);
+                            for (int i = 0; i < 5; i++) units.emplace_back("Swordsman", activeCityUI->getR(), activeCityUI->getC(), 1);
                             sndMove.play();
-                            gui.showCityResourcePanel((float)window.getSize().x, activeCityUI->getGold(), activeCityUI->getWood(), activeCityUI->getFood());
                         }
                     }
                 }
             }
 
-            if (event.type == sf::Event::KeyReleased && !isRollingDice) {
+            //  ใช้ KeyReleased (ปล่อยนิ้ว) และแก้จาก Enter เป็น Return
+            if (event.type == sf::Event::KeyReleased && !combatSys.isCombatActive()) {
                 if (event.key.code == sf::Keyboard::Return && isGameRunning) {
+                    // กดจบเทิร์นได้เฉพาะตอนที่เป็นตาของเราเท่านั้น
                     if (turnSys.getCurrentPlayer() == 1) {
                         sndClick.play();
-                        turnSys.endTurn(units);
+                        turnSys.endTurn(units); // เรียกสลับเทิร์นและรีเซ็ต AP
 
+                        UpkeepManager::processAIUpkeep(units, aiFood);
+
+                        // เคลียร์ UI ที่เลือกค้างไว้
                         gui.clearSelection(); leadUnit = nullptr; currentStack.clear(); worldMap.clearHighlight();
                         activeCityUI = nullptr;
                         aiTimer.restart();
@@ -385,74 +449,28 @@ int main() {
                     }
                 }
             }
-        } // <---  End of while(window.pollEvent)
+        } // <---  วงเล็บปิดของ while(window.pollEvent)
 
-        // --- Combat Resolution ---
-        if (isRollingDice && diceAnimTimer.getElapsedTime().asSeconds() > 2.5f) {
-            isRollingDice = false;
-            sndDice.stop();
-            sndHit.play();
-
-            auto atkIt = std::find_if(units.begin(), units.end(), [&](Unit& u) { return u.getR() == atkStartR && u.getC() == atkStartC && u.getOwner() == currentAttackerOwner; });
-            auto defIt = std::find_if(units.begin(), units.end(), [&](Unit& u) { return u.getR() == defTargetR && u.getC() == defTargetC && u.getOwner() != currentAttackerOwner; });
-
-            if (atkIt != units.end() && defIt != units.end()) {
-                if (finalAtkRoll > finalDefRoll) {
-                    units.erase(defIt);
-
-                    bool tileEmpty = true;
-                    for (auto& u : units) {
-                        if (u.getR() == defTargetR && u.getC() == defTargetC && u.getOwner() != currentAttackerOwner) {
-                            tileEmpty = false; break;
-                        }
-                    }
-
-                    if (tileEmpty) {
-                        if (isArmyAttack) {
-                            for (auto& u : units) {
-                                if (u.getR() == atkStartR && u.getC() == atkStartC && u.getOwner() == currentAttackerOwner) {
-                                    u.moveTo(defTargetR, defTargetC); u.consumeAP(1);
-                                }
-                            }
-                        }
-                        else {
-                            auto singleAtk = std::find_if(units.begin(), units.end(), [&](Unit& u) { return u.getR() == atkStartR && u.getC() == atkStartC && u.getOwner() == currentAttackerOwner; });
-                            if (singleAtk != units.end()) { singleAtk->moveTo(defTargetR, defTargetC); singleAtk->consumeAP(1); }
-                        }
-                        if (currentAttackerOwner == 1) worldMap.revealFog(defTargetR, defTargetC, 1);
-                    }
-                    else {
-                        if (isArmyAttack) {
-                            for (auto& u : units) {
-                                if (u.getR() == atkStartR && u.getC() == atkStartC && u.getOwner() == currentAttackerOwner) u.consumeAP(1);
-                            }
-                        }
-                        else {
-                            auto singleAtk = std::find_if(units.begin(), units.end(), [&](Unit& u) { return u.getR() == atkStartR && u.getC() == atkStartC && u.getOwner() == currentAttackerOwner; });
-                            if (singleAtk != units.end()) singleAtk->consumeAP(1);
-                        }
-                    }
-                }
-                else {
-                    units.erase(atkIt);
-                }
-            }
-        }
-
-        // --- AI Turn ---
-        if (isGameRunning && turnSys.getCurrentPlayer() == 2 && !isRollingDice) {
+        // -----------------------------------------------------------------------
+        // ระบบสมอง AI นักล่า - แบบหน่วงเวลาให้เห็นมันเดินทีละก้าว!
+        // -----------------------------------------------------------------------
+        if (isGameRunning && turnSys.getCurrentPlayer() == 2 && !combatSys.isCombatActive()) {
+            // AI จะคิดและเดินก้าวต่อไป ก็ต่อเมื่อเวลาผ่านไปแล้ว 0.5 วินาที
             if (aiTimer.getElapsedTime().asSeconds() > 0.5f) {
                 bool aiMovedThisTick = false;
                 int evenDir[6][2] = { {-1,-1}, {-1,0}, {0,-1}, {0,1}, {1,-1}, {1,0} };
                 int oddDir[6][2] = { {-1,0}, {-1,1}, {0,-1}, {0,1}, {1,0}, {1,1} };
 
-                if (aiGold >= 100 && aiWood >= 50 && aiFood >= 50) {
-                    aiGold -= 100; aiWood -= 50; aiFood -= 50; aiCityLevel++;
-                    units.emplace_back("Enemy_Lv" + std::to_string(aiCityLevel), aiBaseR, aiBaseC, 2);
+                // AI ปั๊มทหารเน้นจำนวนแบบ RISK
+                if (aiGold >= 20 && aiFood >= 50) {
+                    aiGold -= 20; aiFood -= 50;
+                    units.emplace_back("Enemy", aiBaseR, aiBaseC, 2);
                 }
 
+                // กวาดหา AI ทีละตัวที่ยังมีแรง (AP > 0)
                 for (size_t i = 0; i < units.size(); ++i) {
                     if (units[i].getOwner() == 2 && units[i].getCurrentAP() > 0) {
+                        // ฟาร์มของ
                         HexTile* currentTile = worldMap.getTile(units[i].getR(), units[i].getC());
                         if (currentTile && (currentTile->gold > 0 || currentTile->wood > 0 || currentTile->food > 0)) {
                             aiGold += currentTile->gold; aiWood += currentTile->wood; aiFood += currentTile->food;
@@ -463,6 +481,7 @@ int main() {
                         int minDist = 999999;
                         bool enemyInSight = false;
 
+                        // หาระยะศัตรู (สายตา 5 ช่อง)
                         for (auto& enemy : units) {
                             if (enemy.getOwner() == 1) {
                                 int dist = getHexDistance(units[i].getR(), units[i].getC(), enemy.getR(), enemy.getC());
@@ -472,6 +491,7 @@ int main() {
                             }
                         }
 
+                        // หาของถ้าไม่เห็นศัตรู
                         if (!enemyInSight) {
                             minDist = 999999;
                             for (int r = 0; r < 50; r++) {
@@ -506,18 +526,8 @@ int main() {
                         if (bestR != units[i].getR() || bestC != units[i].getC()) {
                             auto playerIt = std::find_if(units.begin(), units.end(), [&](Unit& u) { return u.getR() == bestR && u.getC() == bestC && u.getOwner() == 1; });
                             if (playerIt != units.end()) {
-                                atkStartR = units[i].getR(); atkStartC = units[i].getC();
-                                defTargetR = bestR; defTargetC = bestC;
-                                currentAttackerOwner = 2;
-                                isArmyAttack = true;
-
-                                finalAtkRoll = rollDiceRisk(3);
-                                finalDefRoll = rollDiceRisk(2);
-
-                                isRollingDice = true;
-                                diceAnimTimer.restart();
-                                sndDice.play();
-
+                                // AI บุก!
+                                combatSys.initiateCombat(units[i].getR(), units[i].getC(), bestR, bestC, 2, sndDice, true);
                                 worldMap.clearHighlight(); gui.clearSelection(); leadUnit = nullptr; currentStack.clear();
                             }
                             else {
@@ -527,37 +537,54 @@ int main() {
                             }
                         }
                         else {
+                            // เดินไม่ได้ (อาจจะถึงตัวแล้ว) ให้หยุดอยู่กับที่
                             units[i].consumeAP(units[i].getCurrentAP());
                         }
 
                         aiMovedThisTick = true;
-                        break;
+                        break; // จบการทำงานของ AI ในลูปนี้ เพื่อเว้นจังหวะให้หน้าจอได้วาดภาพ 1 เฟรม
                     }
                 }
 
+                // ถ้าวนหา AI ทุกตัวแล้ว ไม่มีตัวไหนเหลือแรง (AP) เลย แปลว่าจบเทิร์นแล้ว!
                 if (!aiMovedThisTick) {
                     turnSys.endTurn(units);
                     currentTurnNumber++;
                     std::cout << ">>> Switched to Player 1 <<<" << std::endl;
+
+                    // --- ประมวลผลความหิวของผู้เล่นทันทีที่ AI จบเทิร์น ---
+                    UpkeepManager::processPlayerUpkeep(units, worldMap.getFirstCity());
                 }
                 aiTimer.restart();
             }
         }
 
         // --- Rendering ---
-        if (!isRollingDice) camera.update(window);
+        // 4. อัปเดตกล้อง (คำนวณการเลื่อน)
+        if (!combatSys.isCombatActive()) camera.update(window);
 
+        // 5. นำ View จากกล้องมาใส่ window ก่อนจะทำอย่างอื่น
         window.setView(camera.getView());
 
-        if (!isRollingDice) {
+        // --- Logic การตรวจสอบ Highlight ---
+        // จุดสำคัญ: ต้องส่ง view ของ camera เข้าไปใน mapPixelToCoords ด้วย
+        if (!combatSys.isCombatActive()) {
             sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window), camera.getView());
             worldMap.updateHighlight(mousePos);
         }
 
+        if (isGameRunning) {
+            worldMap.updateVision(units, 1); // เลข 1 คือให้เปิดไฟให้ Player 1 (เรา)
+        }
+
+        // พื้นหลังสีน้ำเงินเข้มๆ เหมือนอวกสร้าง
         window.clear(sf::Color(20, 20, 30));
-        window.setView(camera.getView());
+
+        // สั่งวาด Map แค่บรรทัดเดียว!
+        window.setView(camera.getView()); // ใช้ View กล้องวาดแมพ
         worldMap.draw(window);
 
+        // ไฮไลท์เป้าหมายสีแดง
         if (leadUnit != nullptr && turnSys.getCurrentPlayer() == 1) {
             for (auto& u : units) {
                 if (u.getOwner() == 2 && worldMap.isValidMove(u.getR(), u.getC())) {
@@ -573,113 +600,46 @@ int main() {
             }
         }
 
+        // -----------------------------------------------------------------------
+        //  ระบบพรางตาศัตรู (วาดเฉพาะตัวที่อยู่ในระยะมองเห็น)
+        // -----------------------------------------------------------------------
         for (auto& unit : units) {
             if (unit.getOwner() == 1) {
+                // ตัวเรา (Player 1) วาดเสมอ
                 unit.draw(window);
             }
             else {
+                // ศัตรู (Player 2) เช็คให้ชัวร์ว่าช่องนั้นสว่างอยู่จริงๆ
                 HexTile* tile = worldMap.getTile(unit.getR(), unit.getC());
                 if (tile != nullptr && tile->isVisible) {
-                    unit.draw(window);
+                    unit.draw(window); // วาดก็ต่อเมื่ออยู่ในไฟสว่าง (isVisible)
                 }
             }
         }
         worldMap.drawCities(window);
 
+        // --- ส่งข้อมูลให้ UI อัปเดตเลขเทิร์นก่อนวาด ---
         gui.updateTurnInfo(turnSys.getCurrentPlayer(), currentTurnNumber);
 
+        // เปรมทำ - ส่งข้อมูลทรัพยากรของเมืองไปแสดงมุมขวาบน
         City* myCity = worldMap.getFirstCity();
         if (myCity) gui.updateResourceBar(myCity->getWood(), myCity->getGold(), myCity->getFood());
+        // เปรมทำ - จบ
 
+        // คืนค่า View ปกติเพื่อวาด UI ทับข้างบนสุด
         window.setView(window.getDefaultView());
 
         if (worldMap.isGameStarted()) {
             gui.draw(window);
         }
+
         cityPanel.draw(window);
 
-        if (isRollingDice && hasCombatFont) {
-            float elapsed = diceAnimTimer.getElapsedTime().asSeconds();
-            sf::RectangleShape darkOverlay(sf::Vector2f((float)window.getSize().x, (float)window.getSize().y));
-            darkOverlay.setFillColor(sf::Color(0, 0, 0, 180));
-            window.draw(darkOverlay);
-
-            if (elapsed < 1.5f) {
-                displayAtkRoll = (std::rand() % 6) + 1;
-                displayDefRoll = (std::rand() % 6) + 1;
-            }
-            else {
-                displayAtkRoll = finalAtkRoll;
-                displayDefRoll = finalDefRoll;
-            }
-
-            std::string titleStr = "COMBAT PHASE";
-            std::string atkStr = (currentAttackerOwner == 1 ? "PLAYER (Attacker)\nRolls 3 Dice" : "AI (Attacker)\nRolls 3 Dice");
-            std::string defStr = (currentAttackerOwner == 1 ? "AI (Defender)\nRolls 2 Dice" : "PLAYER (Defender)\nRolls 2 Dice");
-
-            sf::Text titleText(titleStr, combatFont, 50); titleText.setFillColor(sf::Color::Yellow); titleText.setPosition(window.getSize().x / 2.0f - 200.f, 100.f);
-            sf::Text atkSideText(atkStr, combatFont, 30); atkSideText.setFillColor(sf::Color(255, 100, 100)); atkSideText.setPosition(window.getSize().x / 4.0f - 100.f, 300.f);
-            sf::Text atkRollText(std::to_string(displayAtkRoll), combatFont, 100); atkRollText.setFillColor(sf::Color::White); atkRollText.setPosition(window.getSize().x / 4.0f, 400.f);
-            sf::Text vsText("VS", combatFont, 40); vsText.setFillColor(sf::Color::White); vsText.setPosition(window.getSize().x / 2.0f - 25.f, 420.f);
-            sf::Text defSideText(defStr, combatFont, 30); defSideText.setFillColor(sf::Color(100, 150, 255)); defSideText.setPosition(window.getSize().x * 3.0f / 4.0f - 100.f, 300.f);
-            sf::Text defRollText(std::to_string(displayDefRoll), combatFont, 100); defRollText.setFillColor(sf::Color::White); defRollText.setPosition(window.getSize().x * 3.0f / 4.0f, 400.f);
-
-            window.draw(titleText); window.draw(atkSideText); window.draw(atkRollText);
-            window.draw(vsText); window.draw(defSideText); window.draw(defRollText);
-
-            if (elapsed >= 1.5f) {
-                sf::Text resultText("", combatFont, 60);
-                if (finalAtkRoll > finalDefRoll) {
-                    resultText.setString("ATTACKER WINS!"); resultText.setFillColor(sf::Color::Green);
-                }
-                else {
-                    resultText.setString("DEFENDER WINS!"); resultText.setFillColor(sf::Color::Red);
-                }
-                resultText.setPosition(window.getSize().x / 2.0f - 220.f, 600.f);
-                window.draw(resultText);
-            }
-        }
+        // ให้ CombatManager จัดการวาดและลบ Unit ให้เสร็จสรรพ
+        combatSys.updateAndDraw(window, units, worldMap, sndDice, sndHit);
 
         window.display();
     } // <---  วงเล็บปิดของ while(window.isOpen())
 
-    return 0; // <---  ปิด main() ตรงนี้ถูกแล้ว!
+    return 0; // <---  ย้าย return 0 มาไว้จุดล่างสุดนอกลูป
 }
-
-#if 0
-//panel
-GameMap gameMap(10, 10);
-sf::Font font;
-font.loadFromFile("arial.ttf");
-sf::RectangleShape panel;
-panel.setSize(sf::Vector2f(300, 600));
-panel.setFillColor(sf::Color(40, 40, 40));
-panel.setPosition(850, 50);
-sf::Text panelText;
-panelText.setFont(font);
-panelText.setCharacterSize(18);
-panelText.setFillColor(sf::Color::White);
-panelText.setPosition(870, 70);
-while (window.isOpen())
-{
-    sf::Event event;
-    while (window.pollEvent(event))
-    {
-        if (event.type == sf::Event::Closed)
-            window.close();
-        if (event.type == sf::Event::MouseButtonPressed) {
-            sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
-            gameMap.handleMouseClick(mousePos);
-        }
-    }
-    window.clear();
-    gameMap.draw(window);
-    City* city = gameMap.getSelectedCity();
-    if (city != nullptr) {
-        window.draw(panel);
-        panelText.setString(city->getCityInfo());
-        window.draw(panelText);
-    }
-    window.display();
-}
-#endif
