@@ -30,6 +30,7 @@ private:
     sf::Text m_woodText;
     sf::Text m_goldText;
     sf::Text m_foodText;
+    // เปรมทำ - จบ
 
     // --- ส่วนแถบขวา (Side Panel) ---
     bool m_showSidePanel = false;
@@ -39,6 +40,11 @@ private:
     sf::RectangleShape endTurnBtn;
     sf::Text endTurnText;
     sf::Text turnCounterText;
+
+    // Building City Button
+    sf::RectangleShape buildingCityBtn;
+    sf::Text buildingCityText;
+    bool m_buildingCityMode = false; 
 
     // ==========================================
     // [ระบบกองทัพและการแยกทัพ]
@@ -66,12 +72,16 @@ public:
     // เปรมทำ - ฟังก์ชันอัปเดตทรัพยากรมุมขวาบน
     void updateResourceBar(int wood, int gold, int food);
 
+    bool isBuildingCityButtonClicked(sf::Vector2f mousePos);
+    bool isBuildingCityMode() const { return m_buildingCityMode; }
+    void setBuildingCityMode(bool val) { m_buildingCityMode = val; }
+
     // --- ฟังก์ชันคุมปุ่มแยกกองทัพ ---
     bool isSidePanelVisible() const { return m_showSidePanel; }
     void toggleArmyMode() { m_isArmyMode = !m_isArmyMode; }
     bool isArmyMode() const { return m_isArmyMode; }
     void setArmyMode(bool mode) { m_isArmyMode = mode; }
-    void setSelectedIndex(int idx) { m_selectedIndex = idx; m_isArmyMode = false; }
+    void setSelectedIndex(int idx) { m_selectedIndex = idx; }
     int getSelectedIndex() const { return m_selectedIndex; }
     bool isModeButtonClicked(sf::Vector2f mousePos);
     int getClickedItemIndex(sf::Vector2f mousePos);

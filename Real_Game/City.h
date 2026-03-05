@@ -3,6 +3,7 @@
 #include <vector>
 #include <string>
 #include "ResourceManage.h"   
+#include "BuildingType.h"
 
 class City {
 private:
@@ -17,9 +18,16 @@ private:
     int maxLevel = 5;
     ResourceYield stockpile;
 
-    // ค่าใช้จ่ายในการอัพเกรดแต่ละเลเวล (index 0 = lv1->2, index 3 = lv4->5)
+    // ค่าใช้จ่ายในการอัพเกรดแต่ละเลเวล
     struct UpgradeCost { int gold, wood, food; };
     static const UpgradeCost upgradeCosts[4];
+
+    Building buildings[4] = {
+        { BuildingType::Village,    0 },
+        { BuildingType::Barracks,   0 },
+        { BuildingType::Restaurant, 0 },
+        { BuildingType::Lumbermill, 0 }
+    };
 
 public:
     City(int r, int c, sf::Vector2f pos);
@@ -43,6 +51,7 @@ public:
     bool canUpgrade() const;
 
     // อัพเกรด (หักทรัพยากรเอง) - คืน true ถ้าสำเร็จ
+
     bool upgrade();
 
     // Stockpile
@@ -53,6 +62,19 @@ public:
     void addWood(int amount) { stockpile.wood += amount; }
     void addFood(int amount) { stockpile.food += amount; }
     ResourceYield getTotalResource() const;
+
+    // buildings
+    Building& getBuilding(int idx) { return buildings[idx]; }
+    const Building& getBuilding(int idx) const { return buildings[idx]; }
+    // Building limit system
+    int getTotalBuildingCount() const;   // นับ building ทั้งหมดที่สร้างแล้ว
+    int getMaxTotalBuildings() const;    // สูงสุดที่สร้างได้ตามเลเวล
+    int getMaxPerBuilding() const;       // สูงสุดต่อประเภท (= level)
+
+    bool canBuild(int idx) const;       // เช็คทรัพยากรพอไหม
+    bool build(int idx);                // สร้าง (หักทรัพยากร)
+    void produceTurn();                 // เรียกทุกเทิร์น -> บวกทรัพยากร
+    int getBarracksCount() const { return buildings[1].count; }
 
     void draw(sf::RenderWindow& window);
     sf::FloatRect getBounds() const;

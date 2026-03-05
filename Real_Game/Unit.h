@@ -22,6 +22,7 @@ public:
     void consumeAP(int cost) { m_currentAP -= cost; }
     void resetAP() { m_currentAP = m_maxAP; }
     int getMoveRange() const { return m_moveRange; }
+    int getSightRange() const { return m_sightRange; }
 
     // Getter พื้นฐาน
     int getR() const { return m_gridR; }
@@ -47,7 +48,8 @@ private:
     // Stats
     int m_maxAP = 2;       // เดินได้ 2 ครั้งต่อเทิร์น
     int m_currentAP = 2;
-    int m_moveRange = 3;   // รัศมีเดิน 3 ช่อง
+    int m_moveRange = 1;   // รัศมีเดิน 1 ช่อง
+    int m_sightRange = 1;  // รัศมีมองเห็น 1 ช่อง
 
     void updateScreenPosition();
 };
