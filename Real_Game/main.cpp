@@ -19,6 +19,7 @@
 #include "UpkeepManager.h" // <--- ระบบเสบียงความหิว
 #include "CombatManager.h" // <--- ระบบต่อสู้ลูกเต๋า
 #include "BuildMenu.h"
+#include "AIManager.h"    // <--- ระบบสมอง AI
 
 // ฟังก์ชันหาระยะทาง (สำหรับ AI และระบบทั่วไป)
 int getHexDistance(int r1, int c1, int r2, int c2) {
@@ -122,10 +123,7 @@ int main() {
     City* activeCityUI = nullptr; // ตัวแปรจดจำเมืองที่เรากำลังเปิดดูอยู่ (เพื่อเอาไว้สร้างทหาร)
 
     // --- ตัวแปรสมอง AI ---
-    sf::Clock aiTimer;
-    int aiBaseR = 0, aiBaseC = 0;
-    int aiGold = 0, aiWood = 0, aiFood = 0;
-    int aiCityLevel = 1;
+    AIManager aiManager;
 
     while (window.isOpen()) {
         sf::Vector2f mousePosScreen = window.mapPixelToCoords(sf::Mouse::getPosition(window));
@@ -218,12 +216,12 @@ int main() {
                         turnSys.endTurn(units);
 
                         // --- [NEW] ประมวลผลความหิวของ AI ทันทีที่ผู้เล่นกด Enter จบเทิร์น ---
-                        UpkeepManager::processAIUpkeep(units, aiFood);
+                        UpkeepManager::processAIUpkeep(units, aiManager.getAIFood());
 
                         // เคลียร์ UI ที่เลือกค้างไว้
                         gui.clearSelection(); leadUnit = nullptr; currentStack.clear(); worldMap.clearHighlight();
                         activeCityUI = nullptr;
-                        aiTimer.restart();
+
                         std::cout << ">>> Switched to AI (Player 2) <<<" << std::endl;
                         continue; // ข้ามการทำงานด้านล่างไปเลย เพราะคลิกปุ่มไปแล้ว
                     }
@@ -283,7 +281,7 @@ int main() {
                                 }
                                 if (attempts >= 1000) { enemyR = std::min(44, spawnR + 15); enemyC = std::min(44, spawnC + 15); }
 
-                                aiBaseR = enemyR; aiBaseC = enemyC;
+                                aiManager.initBase(enemyR, enemyC);
                                 units.emplace_back("Enemy", enemyR, enemyC, 2);
                             }
                         }
@@ -371,8 +369,8 @@ int main() {
 
                                     currentStack = stackInTile;
                                     gui.setSelectionList(currentStack);
-                                    gui.setSelectedIndex(0);
                                     gui.setArmyMode(true); // Default เป็น Army Mode เสมอเวลาคลิกเลือกก้อนทหาร
+                                    gui.setSelectedIndex(0);
 
                                     leadUnit = nullptr;
                                     for (auto* u : currentStack) {
@@ -466,12 +464,12 @@ int main() {
                         sndClick.play();
                         turnSys.endTurn(units); // เรียกสลับเทิร์นและรีเซ็ต AP
 
-                        UpkeepManager::processAIUpkeep(units, aiFood);
+                        UpkeepManager::processAIUpkeep(units, aiManager.getAIFood());
 
                         // เคลียร์ UI ที่เลือกค้างไว้
                         gui.clearSelection(); leadUnit = nullptr; currentStack.clear(); worldMap.clearHighlight();
                         activeCityUI = nullptr;
-                        aiTimer.restart();
+
                         std::cout << ">>> Switched to AI (Player 2) <<<" << std::endl;
                     }
                 }
@@ -482,107 +480,12 @@ int main() {
         // ระบบสมอง AI นักล่า - แบบหน่วงเวลาให้เห็นมันเดินทีละก้าว!
         // -----------------------------------------------------------------------
         if (isGameRunning && turnSys.getCurrentPlayer() == 2 && !combatSys.isCombatActive()) {
-            // AI จะคิดและเดินก้าวต่อไป ก็ต่อเมื่อเวลาผ่านไปแล้ว 0.5 วินาที
-            if (aiTimer.getElapsedTime().asSeconds() > 0.5f) {
-                bool aiMovedThisTick = false;
-                int evenDir[6][2] = { {-1,-1}, {-1,0}, {0,-1}, {0,1}, {1,-1}, {1,0} };
-                int oddDir[6][2] = { {-1,0}, {-1,1}, {0,-1}, {0,1}, {1,0}, {1,1} };
-
-                // AI ปั๊มทหารเน้นจำนวนแบบ RISK
-                if (aiGold >= 20 && aiFood >= 50) {
-                    aiGold -= 20; aiFood -= 50;
-                    units.emplace_back("Enemy", aiBaseR, aiBaseC, 2);
-                }
-
-                // กวาดหา AI ทีละตัวที่ยังมีแรง (AP > 0)
-                for (size_t i = 0; i < units.size(); ++i) {
-                    if (units[i].getOwner() == 2 && units[i].getCurrentAP() > 0) {
-                        // ฟาร์มของ
-                        HexTile* currentTile = worldMap.getTile(units[i].getR(), units[i].getC());
-                        if (currentTile && (currentTile->gold > 0 || currentTile->wood > 0 || currentTile->food > 0)) {
-                            aiGold += currentTile->gold; aiWood += currentTile->wood; aiFood += currentTile->food;
-                            currentTile->gold = 0; currentTile->wood = 0; currentTile->food = 0;
-                        }
-
-                        int targetR = -1, targetC = -1;
-                        int minDist = 999999;
-                        bool enemyInSight = false;
-
-                        // หาระยะศัตรู (สายตา 5 ช่อง)
-                        for (auto& enemy : units) {
-                            if (enemy.getOwner() == 1) {
-                                int dist = getHexDistance(units[i].getR(), units[i].getC(), enemy.getR(), enemy.getC());
-                                if (dist <= 5) {
-                                    if (dist < minDist) { minDist = dist; targetR = enemy.getR(); targetC = enemy.getC(); enemyInSight = true; }
-                                }
-                            }
-                        }
-
-                        // หาของถ้าไม่เห็นศัตรู
-                        if (!enemyInSight) {
-                            minDist = 999999;
-                            for (int r = 0; r < 50; r++) {
-                                for (int c = 0; c < 50; c++) {
-                                    HexTile* t = worldMap.getTile(r, c);
-                                    if (t && (t->gold > 0 || t->wood > 0 || t->food > 0)) {
-                                        int dist = getHexDistance(units[i].getR(), units[i].getC(), r, c);
-                                        if (dist < minDist) { minDist = dist; targetR = r; targetC = c; }
-                                    }
-                                }
-                            }
-                        }
-
-                        if (targetR == -1) {
-                            targetR = std::max(0, std::min(49, aiBaseR + (std::rand() % 11 - 5)));
-                            targetC = std::max(0, std::min(49, aiBaseC + (std::rand() % 11 - 5)));
-                        }
-
-                        int bestR = units[i].getR(), bestC = units[i].getC();
-                        int bestDist = getHexDistance(units[i].getR(), units[i].getC(), targetR, targetC);
-
-                        for (int dir = 0; dir < 6; ++dir) {
-                            int nr = units[i].getR() + (units[i].getR() % 2 == 0 ? evenDir[dir][0] : oddDir[dir][0]);
-                            int nc = units[i].getC() + (units[i].getR() % 2 == 0 ? evenDir[dir][1] : oddDir[dir][1]);
-                            HexTile* nTile = worldMap.getTile(nr, nc);
-                            if (nTile != nullptr) {
-                                int d = getHexDistance(nr, nc, targetR, targetC);
-                                if (d < bestDist) { bestDist = d; bestR = nr; bestC = nc; }
-                            }
-                        }
-
-                        if (bestR != units[i].getR() || bestC != units[i].getC()) {
-                            auto playerIt = std::find_if(units.begin(), units.end(), [&](Unit& u) { return u.getR() == bestR && u.getC() == bestC && u.getOwner() == 1; });
-                            if (playerIt != units.end()) {
-                                // AI บุก!
-                                combatSys.initiateCombat(units[i].getR(), units[i].getC(), bestR, bestC, 2, sndDice, true);
-                                worldMap.clearHighlight(); gui.clearSelection(); leadUnit = nullptr; currentStack.clear();
-                            }
-                            else {
-                                units[i].moveTo(bestR, bestC);
-                                units[i].consumeAP(1);
-                                sndMove.play();
-                            }
-                        }
-                        else {
-                            // เดินไม่ได้ (อาจจะถึงตัวแล้ว) ให้หยุดอยู่กับที่
-                            units[i].consumeAP(units[i].getCurrentAP());
-                        }
-
-                        aiMovedThisTick = true;
-                        break; // จบการทำงานของ AI ในลูปนี้ เพื่อเว้นจังหวะให้หน้าจอได้วาดภาพ 1 เฟรม
-                    }
-                }
-
-                // ถ้าวนหา AI ทุกตัวแล้ว ไม่มีตัวไหนเหลือแรง (AP) เลย แปลว่าจบเทิร์นแล้ว!
-                if (!aiMovedThisTick) {
-                    turnSys.endTurn(units);
-                    currentTurnNumber++;
-                    std::cout << ">>> Switched to Player 1 <<<" << std::endl;
-
-                    // --- ประมวลผลความหิวของผู้เล่นทันทีที่ AI จบเทิร์น ---
-                    UpkeepManager::processPlayerUpkeep(units, worldMap.getFirstCity());
-                }
-                aiTimer.restart();
+            bool aiEndedTurn = aiManager.processTurn(units, worldMap, turnSys, combatSys, sndMove, sndDice);
+            if (aiEndedTurn) {
+                currentTurnNumber++;
+                std::cout << ">>> Switched to Player 1 <<<" << std::endl;
+                // --- ประมวลผลความหิวของผู้เล่นทันทีที่ AI จบเทิร์น ---
+                UpkeepManager::processPlayerUpkeep(units, worldMap.getFirstCity());
             }
         }
 
