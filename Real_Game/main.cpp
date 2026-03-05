@@ -16,6 +16,7 @@
 #include "TurnManager.h" // <--- ระบบเทิร์น
 #include "MainMenu.h" //<--- ระบบเมนูหลัก
 #include "CityPanel.h"
+#include "BuildMenu.h"
 
 // ฟังก์ชันหาระยะทาง (สำหรับ AI และระบบทั่วไป)
 int getHexDistance(int r1, int c1, int r2, int c2) {
@@ -92,6 +93,8 @@ int main() {
     MouseUI gui; //(PLAY)  <--- ลบตัวที่ซ้ำออกให้แล้วครับ
     CityPanel cityPanel(window.getSize().x, window.getSize().y);
 
+    BuildMenu buildMenu(window.getSize().x, window.getSize().y);
+
     //----Unit System----//
     std::vector<Unit> units;       // เก็บยูนิตทั้งหมด
 
@@ -141,6 +144,7 @@ int main() {
             if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) window.close();
 
             cityPanel.handleEvent(event);
+            buildMenu.handleEvent(event);
 
             // 3. ส่ง Event ให้กล้องจัดการ (คลิก/ปล่อย/หมุนล้อ)
             if (!isRollingDice) {
@@ -205,6 +209,19 @@ int main() {
                         continue;
                     }
 
+                    // BUILD CITY button -> เปิด/ปิด BuildMenu
+                    if (gui.isBuildingCityButtonClicked(uiPos) && isGameRunning) {
+                        if (buildMenu.isOpen()) {
+                            buildMenu.clear();
+                        }
+                        else {
+                            City* myCity = worldMap.getFirstCity();
+                            if (myCity) buildMenu.setCity(myCity);
+                        }
+                        sndClick.play();
+                        continue;
+                    }
+
                     gui.hideInfo();
                     activeCityUI = nullptr;
 
@@ -247,6 +264,16 @@ int main() {
                     else {
                         int r = 0, c = 0;
                         if (worldMap.getGridCoords(worldPos, r, c)) {
+
+                            if (gui.isBuildingCityMode()) {
+                                HexTile* ft = worldMap.getTile(r, c);
+                                if (ft && ft->isVisible && worldMap.getCityAt(r, c) == nullptr) {
+                                    worldMap.foundCity(r, c);   
+                                    gui.setBuildingCityMode(false);
+                                    std::cout << "New city built at " << r << "," << c << std::endl;
+                                }
+                                continue;
+                            }
 
                             HexTile* clickedTile = worldMap.getTile(r, c);
 
@@ -597,6 +624,7 @@ int main() {
             gui.draw(window);
         }
         cityPanel.draw(window);
+        buildMenu.draw(window);
 
         if (isRollingDice && hasCombatFont) {
             float elapsed = diceAnimTimer.getElapsedTime().asSeconds();

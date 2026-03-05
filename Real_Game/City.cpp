@@ -10,6 +10,8 @@ const City::UpgradeCost City::upgradeCosts[4] = {
     { 800, 600, 400 },   // lv 4 -> 5
 };
 
+static const int MAX_BUILDINGS_PER_LEVEL[5] = { 2, 4, 7, 11, 16 };
+
 City::City(int r, int c, sf::Vector2f pos)
     : gridR(r), gridC(c), center(pos)
 {
@@ -88,6 +90,58 @@ bool City::upgrade() {
     stockpile.food -= cost.food;
     level++;
     return true;
+}
+
+//นับจำนวน building รวมทั้งหมดในเมืองนี้
+int City::getTotalBuildingCount() const {
+    int total = 0;
+    for (int i = 0; i < 4; i++) total += buildings[i].count;
+    return total;
+}
+
+//จำนวน building รวมสูงสุดที่เลเวลปัจจุบัน
+int City::getMaxTotalBuildings() const {
+    return MAX_BUILDINGS_PER_LEVEL[level - 1];
+}
+
+//จำนวนสูงสุดของ building แต่ละประเภท = เลเวลเมือง
+int City::getMaxPerBuilding() const {
+    return level;
+}
+
+//เช็คว่าสร้าง building ได้ไหม
+bool City::canBuild(int idx) const {
+    if (idx < 0 || idx > 3) return false;
+    //เช็ค building limit รวม
+    if (getTotalBuildingCount() >= getMaxTotalBuildings()) return false;
+
+    //เช็ค limit ต่อประเภท
+    if (buildings[idx].count >= getMaxPerBuilding()) return false;
+
+    BuildingCost cost = buildings[idx].getCost();
+    return stockpile.gold >= cost.gold &&
+        stockpile.wood >= cost.wood &&
+        stockpile.food >= cost.food;
+}
+
+//สร้าง building 
+bool City::build(int idx) {
+    if (!canBuild(idx)) return false;
+    BuildingCost cost = buildings[idx].getCost();
+    stockpile.gold -= cost.gold;
+    stockpile.wood -= cost.wood;
+    stockpile.food -= cost.food;
+    buildings[idx].count++;
+    return true;
+}
+
+// เรียกทุกเทิร์น -> บวกผลผลิตเข้า stockpile
+void City::produceTurn() {
+    for (int i = 0; i < 4; i++) {
+        stockpile.gold += buildings[i].goldPerTurn();
+        stockpile.food += buildings[i].foodPerTurn();
+        stockpile.wood += buildings[i].woodPerTurn();
+    }
 }
 
 void City::draw(sf::RenderWindow& window)

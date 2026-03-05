@@ -52,6 +52,17 @@ MouseUI::MouseUI() {
         m_foodText.setCharacterSize(22);
         m_foodText.setFillColor(sf::Color::Green);
 
+        buildingCityBtn.setSize(sf::Vector2f(180.f, 54.f));
+        buildingCityBtn.setFillColor(sf::Color(40, 80, 30));
+        buildingCityBtn.setOutlineThickness(2.f);
+        buildingCityBtn.setOutlineColor(sf::Color(120, 200, 80));
+
+        buildingCityText.setFont(font);
+        buildingCityText.setString("BUILDING CITY");
+        buildingCityText.setCharacterSize(20);
+        buildingCityText.setFillColor(sf::Color(200, 255, 150));
+        buildingCityText.setStyle(sf::Text::Bold);
+
         // --- ปุ่มโหมดกองทัพ ---
         modeBtn.setSize(sf::Vector2f(200.f, 40.f));
         modeBtn.setOutlineThickness(2.f);
@@ -143,6 +154,10 @@ bool MouseUI::isEndTurnButtonClicked(sf::Vector2f mousePos) {
     return endTurnBtn.getGlobalBounds().contains(mousePos);
 }
 
+bool MouseUI::isBuildingCityButtonClicked(sf::Vector2f mousePos) {
+    return buildingCityBtn.getGlobalBounds().contains(mousePos);
+}
+
 void MouseUI::updateResourceBar(int wood, int gold, int food) {
     m_wood = wood;
     m_gold = gold;
@@ -226,6 +241,24 @@ void MouseUI::draw(sf::RenderWindow& window) {
         endTurnBtn.setPosition(cx - R, cy - R);
         endTurnBtn.setSize({ R * 2,R * 2 });
     }
+
+    // Building City Button (ซ้ายล่าง)
+    buildingCityBtn.setPosition(20.f, screenH - 80.f);
+    buildingCityText.setPosition(30.f, screenH - 68.f);
+
+    // เปลี่ยนสีปุ่มตอน active mode
+    if (m_buildingCityMode) {
+        buildingCityBtn.setFillColor(sf::Color(100, 160, 40));
+        buildingCityBtn.setOutlineColor(sf::Color(180, 255, 100));
+        buildingCityText.setFillColor(sf::Color::White);
+    }
+    else {
+        buildingCityBtn.setFillColor(sf::Color(40, 80, 30));
+        buildingCityBtn.setOutlineColor(sf::Color(120, 200, 80));
+        buildingCityText.setFillColor(sf::Color(200, 255, 150));
+    }
+    window.draw(buildingCityBtn);
+    window.draw(buildingCityText);
 
     // เปรมทำ - วาด resource bar มุมขวาบน
     float iconSize = 40.f;

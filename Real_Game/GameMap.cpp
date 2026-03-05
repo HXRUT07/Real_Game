@@ -115,6 +115,23 @@ void GameMap::startGame(int spawnR, int spawnC) {
     updateColors();
 }
 
+void GameMap::foundCity(int r, int c) {
+    int idx = r * cols + c;
+    if (idx < 0 || idx >= (int)tiles.size()) return;
+
+    // ตรวจสอบว่ายังไม่มีเมืองซ้ำในช่องนี้
+    if (getCityAt(r, c) != nullptr) return;
+
+    sf::FloatRect bounds = tiles[idx].shape.getGlobalBounds();
+    sf::Vector2f center(bounds.left + bounds.width / 2.f, bounds.top + bounds.height / 2.f);
+
+    cities.push_back(std::make_unique<City>(r, c, center));
+    tiles[idx].type = TerrainType::City;
+    updateColors();
+
+    std::cout << "[GameMap] Founded new city at (" << r << ", " << c << ")\n";
+}
+
 void GameMap::generateWorldResources() {
     int sectorSize = 5;
     for (int sr = 0; sr < rows; sr += sectorSize) {
@@ -333,6 +350,26 @@ void GameMap::draw(sf::RenderWindow& window) {
             window.draw(h);
         }
     }
+
+    // วาด building icon (สี่เหลี่ยมสีกลาง tile) บน tile ที่มี building
+    for (const auto& tile : tiles) {
+        if (tile.buildingType < 0) continue;
+        if (!tile.isVisible) continue; 
+
+        sf::FloatRect b = tile.shape.getGlobalBounds();
+        float cx = b.left + b.width / 2.f;
+        float cy = b.top + b.height / 2.f;
+
+        const float SZ = 12.f; 
+        sf::RectangleShape icon(sf::Vector2f(SZ, SZ));
+        icon.setOrigin(SZ / 2.f, SZ / 2.f);
+        icon.setPosition(cx, cy);
+        icon.setFillColor(getBuildingColor(tile.buildingType));
+        icon.setOutlineColor(sf::Color(0, 0, 0, 180));
+        icon.setOutlineThickness(1.5f);
+        window.draw(icon);
+    }
+
     for (const auto& tile : tiles) {
         if (tile.isHovered && tile.isExplored) {
             sf::ConvexShape h = tile.shape;

@@ -183,6 +183,42 @@ CityPanel::CityPanel(float winW, float winH)
     textNotEnough.setString("! Not enough resources");
     textNotEnough.setPosition(panelX + 20, panelY + 450);
 
+    //Divider 4
+    divider4.setSize(sf::Vector2f(260.f, 1.f));
+    divider4.setPosition(panelX + 20, panelY + 468);
+    divider4.setFillColor(sf::Color(80, 60, 20));
+
+    //Buildings section
+    labelBuildings.setFont(font);
+    labelBuildings.setCharacterSize(11);
+    labelBuildings.setFillColor(sf::Color(160, 130, 60));
+    labelBuildings.setString("BUILDINGS");
+    labelBuildings.setPosition(panelX + 20, panelY + 478);
+
+    textBuildingSlots.setFont(font);
+    textBuildingSlots.setCharacterSize(13);
+    textBuildingSlots.setFillColor(sf::Color(200, 180, 100));
+    textBuildingSlots.setPosition(panelX + 160, panelY + 476);
+
+    // Village, Barracks, Restaurant, Lumbermill
+    static const sf::Color ROW_COLORS[4] = {
+        sf::Color(255, 220, 100),   // Village — ทอง
+        sf::Color(200, 120, 100),   // Barracks — แดง
+        sf::Color(220, 150, 120),   // Restaurant — ส้ม
+        sf::Color(150, 220, 120),   // Lumbermill — เขียว
+    };
+    for (int i = 0; i < 4; i++) {
+        textBuildingRows[i].setFont(font);
+        textBuildingRows[i].setCharacterSize(13);
+        textBuildingRows[i].setFillColor(ROW_COLORS[i]);
+        textBuildingRows[i].setPosition(panelX + 20, panelY + 498 + i * 20.f);
+    }
+
+    textBuildingLimit.setFont(font);
+    textBuildingLimit.setCharacterSize(11);
+    textBuildingLimit.setFillColor(sf::Color(130, 110, 60));
+    textBuildingLimit.setPosition(panelX + 20, panelY + 582);
+
     // Close Button
     btnClose.setSize(sf::Vector2f(26.f, 26.f));
     btnClose.setPosition(panelX + panelW - 36, panelY + 15);
@@ -277,6 +313,9 @@ void CityPanel::handleEvent(const sf::Event& event) {
 
 void CityPanel::draw(sf::RenderWindow& window) {
     if (!city) return;
+
+    sf::View prevView = window.getView();
+    window.setView(window.getDefaultView());
 
     window.draw(background);
     window.draw(topBar);
@@ -374,6 +413,43 @@ void CityPanel::draw(sf::RenderWindow& window) {
         window.draw(btnUpgradeText);
     }
 
+    window.draw(divider4);
+    window.draw(labelBuildings);
+
+    int used = city->getTotalBuildingCount();
+    int maxB = city->getMaxTotalBuildings();
+    int maxPer = city->getMaxPerBuilding();
+
+    textBuildingSlots.setString(std::to_string(used) + " / " + std::to_string(maxB) + " used");
+    textBuildingSlots.setFillColor(used >= maxB ? sf::Color(255, 80, 80) : sf::Color(180, 160, 80));
+    window.draw(textBuildingSlots);
+
+    // แต่ละ building type
+    static const char* names[4] = { "Village", "Barracks", "Restaurant", "Lumbermill" };
+    for (int i = 0; i < 4; i++) {
+        int cnt = city->getBuilding(i).count;
+        std::string row = std::string(names[i]) + ": " + std::to_string(cnt) + " / " + std::to_string(maxPer);
+        if (cnt >= maxPer || used >= maxB) {
+            textBuildingRows[i].setFillColor(sf::Color(100, 80, 60));
+        }
+        else {
+            static const sf::Color ROW_COLORS[4] = {
+                sf::Color(255, 220, 100),
+                sf::Color(200, 120, 100),
+                sf::Color(220, 150, 120),
+                sf::Color(150, 220, 120),
+            };
+            textBuildingRows[i].setFillColor(ROW_COLORS[i]);
+        }
+        textBuildingRows[i].setString(row);
+        window.draw(textBuildingRows[i]);
+    }
+
+    textBuildingLimit.setString("* Upgrade city to unlock more slots");
+    window.draw(textBuildingLimit);
+
     window.draw(btnClose);
     window.draw(btnCloseText);
+
+    window.setView(prevView);
 }
