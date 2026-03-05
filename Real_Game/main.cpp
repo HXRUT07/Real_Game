@@ -2,10 +2,10 @@
 #include <SFML/Audio.hpp> 
 #include <vector>
 #include <cmath>
-#include <cstdlib> 
-#include <ctime>   
-#include <iostream> 
-#include <string>   
+#include <cstdlib> // <--- เพิ่มตัวนี้สำหรับ rand()
+#include <ctime>   // <--- เพิ่มตัวนี้สำหรับ time()
+#include <iostream> // <--- เพิ่มสำหรับ cout
+#include <string>   // <--- เพิ่มสำหรับ string
 #include <algorithm> 
 
 #include "GameMap.h"     // <--- Game map system (Yu)
@@ -17,6 +17,7 @@
 #include "MainMenu.h" //<--- ระบบเมนูหลัก
 #include "CityPanel.h"
 
+// ฟังก์ชันหาระยะทาง (สำหรับ AI และระบบทั่วไป)
 int getHexDistance(int r1, int c1, int r2, int c2) {
     int ac1 = c1 - (r1 - (r1 & 1)) / 2;
     int ac2 = c2 - (r2 - (r2 & 1)) / 2;
@@ -24,19 +25,25 @@ int getHexDistance(int r1, int c1, int r2, int c2) {
 }
 
 int main() {
+    // ตั้งค่า Seed สำหรับการสุ่ม (ใส่ใน Main ทีเดียวจบ)
     std::srand(static_cast<unsigned>(std::time(nullptr)));
 
+    // กำหนดค่าการลบรอยหยัก (Antialiasing) เพื่อให้ขอบหกเหลี่ยมคมชัดขึ้น (PLAY)
     sf::ContextSettings settings;
     settings.antialiasingLevel = 8;
 
     sf::RenderWindow window(sf::VideoMode::getDesktopMode(), "Hexa-Conquest", sf::Style::Fullscreen, settings);
+
+    // จำกัดเฟรมเรตหน่อย เครื่องจะได้ไม่ทำงานหนักเกินไปตอน Fullscreen
     window.setFramerateLimit(60);
 
+    // โหลดฟอนต์สำหรับลูกเต๋า
     sf::Font combatFont;
     bool hasCombatFont = combatFont.loadFromFile("Roboto-VariableFont_wdth,wght.ttf");
     if (!hasCombatFont) hasCombatFont = combatFont.loadFromFile("arial.ttf");
     if (!hasCombatFont) hasCombatFont = combatFont.loadFromFile("assets/fonts/Trajan Pro Regular.ttf");
 
+    // โหลดเสียง
     sf::SoundBuffer bufMove, bufDice, bufHit, bufClick;
     bufMove.loadFromFile("assets/sounds/move.wav");
     bufDice.loadFromFile("assets/sounds/dice.wav");
@@ -48,19 +55,24 @@ int main() {
     sf::Sound sndHit(bufHit);
     sf::Sound sndClick(bufClick);
 
+    // ----Main Menu----//(PLAY)
     {
         MainMenu menu(window, "assets/background.png", "assets/fonts/Trajan Pro Regular.ttf");
-        menu.loadVideoFrames("assets/frames", 240);
+        menu.loadVideoFrames("assets/frames", 240);  // <-- เพิ่มบรรทัดนี้
         sf::Clock menuClock;
 
         while (window.isOpen()) {
             float dt = menuClock.restart().asSeconds();
+
             sf::Event event;
             while (window.pollEvent(event)) {
-                if (event.type == sf::Event::Closed) window.close();
+                if (event.type == sf::Event::Closed)
+                    window.close();
                 menu.handleEvent(event);
             }
+
             menu.update(dt);
+
             if (menu.getState() == MenuState::Play)  break;
             if (menu.getState() == MenuState::Exit) { window.close(); break; }
 
@@ -70,11 +82,14 @@ int main() {
         }
     }
 
+    //----Map system----//(Yu)
+    // 1. สร้าง Map แค่บรรทัดเดียว!
     GameMap worldMap(50, 50);
-    GameCamera camera(window.getSize().x, window.getSize().y);
-    MouseUI gui;
 
-    MouseUI gui; //(PLAY)
+    // 2. สร้าง Object กล้อง
+    GameCamera camera(window.getSize().x, window.getSize().y);
+
+    MouseUI gui; //(PLAY)  <--- ลบตัวที่ซ้ำออกให้แล้วครับ
     CityPanel cityPanel(window.getSize().x, window.getSize().y);
 
     //----Unit System----//
@@ -125,13 +140,12 @@ int main() {
             if (event.type == sf::Event::Closed) window.close();
             if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) window.close();
 
-            // กด Escape เพื่อออกจากเกมได้ (สำคัญมากตอนเทส Fullscreen ไม่งั้นออกยาก)
-            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape)
-                window.close();
-
             cityPanel.handleEvent(event);
+
             // 3. ส่ง Event ให้กล้องจัดการ (คลิก/ปล่อย/หมุนล้อ)
-            camera.handleEvent(event, window);
+            if (!isRollingDice) {
+                camera.handleEvent(event, window);
+            }
 
             if (event.type == sf::Event::MouseButtonPressed && turnSys.getCurrentPlayer() == 1 && !isRollingDice) {
                 sf::Vector2i pixelPos = sf::Mouse::getPosition(window);
@@ -371,8 +385,9 @@ int main() {
                     }
                 }
             }
-        } 
+        } // <---  End of while(window.pollEvent)
 
+        // --- Combat Resolution ---
         if (isRollingDice && diceAnimTimer.getElapsedTime().asSeconds() > 2.5f) {
             isRollingDice = false;
             sndDice.stop();
@@ -424,12 +439,10 @@ int main() {
             }
         }
 
+        // --- AI Turn ---
         if (isGameRunning && turnSys.getCurrentPlayer() == 2 && !isRollingDice) {
-
             if (aiTimer.getElapsedTime().asSeconds() > 0.5f) {
-
                 bool aiMovedThisTick = false;
-
                 int evenDir[6][2] = { {-1,-1}, {-1,0}, {0,-1}, {0,1}, {1,-1}, {1,0} };
                 int oddDir[6][2] = { {-1,0}, {-1,1}, {0,-1}, {0,1}, {1,0}, {1,1} };
 
@@ -440,7 +453,6 @@ int main() {
 
                 for (size_t i = 0; i < units.size(); ++i) {
                     if (units[i].getOwner() == 2 && units[i].getCurrentAP() > 0) {
-
                         HexTile* currentTile = worldMap.getTile(units[i].getR(), units[i].getC());
                         if (currentTile && (currentTile->gold > 0 || currentTile->wood > 0 || currentTile->food > 0)) {
                             aiGold += currentTile->gold; aiWood += currentTile->wood; aiFood += currentTile->food;
@@ -528,11 +540,11 @@ int main() {
                     currentTurnNumber++;
                     std::cout << ">>> Switched to Player 1 <<<" << std::endl;
                 }
-
                 aiTimer.restart();
             }
         }
 
+        // --- Rendering ---
         if (!isRollingDice) camera.update(window);
 
         window.setView(camera.getView());
@@ -543,7 +555,6 @@ int main() {
         }
 
         window.clear(sf::Color(20, 20, 30));
-
         window.setView(camera.getView());
         worldMap.draw(window);
 
@@ -577,23 +588,15 @@ int main() {
 
         gui.updateTurnInfo(turnSys.getCurrentPlayer(), currentTurnNumber);
 
-        // --- [แก้ไขตรงนี้!] สั่งให้อัปเดตข้อมูลของหน้าต่าง Treasury แบบออโต้! ---
         City* myCity = worldMap.getFirstCity();
         if (myCity) gui.updateResourceBar(myCity->getWood(), myCity->getGold(), myCity->getFood());
-        // เปรมทำ - จบ
-
-        window.setView(window.getDefaultView()); // คืนค่า View ปกติเพื่อวาด UI ทับข้างบนสุด
-        gui.draw(window);
-        cityPanel.draw(window);
-
-        window.display();
-    } // <---  วงเล็บปิดของ while(window.isOpen())
 
         window.setView(window.getDefaultView());
 
         if (worldMap.isGameStarted()) {
             gui.draw(window);
         }
+        cityPanel.draw(window);
 
         if (isRollingDice && hasCombatFont) {
             float elapsed = diceAnimTimer.getElapsedTime().asSeconds();
@@ -638,7 +641,45 @@ int main() {
         }
 
         window.display();
-    }
+    } // <---  วงเล็บปิดของ while(window.isOpen())
 
-    return 0;
+    return 0; // <---  ปิด main() ตรงนี้ถูกแล้ว!
 }
+
+#if 0
+//panel
+GameMap gameMap(10, 10);
+sf::Font font;
+font.loadFromFile("arial.ttf");
+sf::RectangleShape panel;
+panel.setSize(sf::Vector2f(300, 600));
+panel.setFillColor(sf::Color(40, 40, 40));
+panel.setPosition(850, 50);
+sf::Text panelText;
+panelText.setFont(font);
+panelText.setCharacterSize(18);
+panelText.setFillColor(sf::Color::White);
+panelText.setPosition(870, 70);
+while (window.isOpen())
+{
+    sf::Event event;
+    while (window.pollEvent(event))
+    {
+        if (event.type == sf::Event::Closed)
+            window.close();
+        if (event.type == sf::Event::MouseButtonPressed) {
+            sf::Vector2f mousePos = window.mapPixelToCoords(sf::Mouse::getPosition(window));
+            gameMap.handleMouseClick(mousePos);
+        }
+    }
+    window.clear();
+    gameMap.draw(window);
+    City* city = gameMap.getSelectedCity();
+    if (city != nullptr) {
+        window.draw(panel);
+        panelText.setString(city->getCityInfo());
+        window.draw(panelText);
+    }
+    window.display();
+}
+#endif
