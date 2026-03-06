@@ -169,8 +169,16 @@
   <ItemGroup>
     <Image Include="Blue Castle.png" />
     <Image Include="C:\Users\USER\Downloads\food.png" />
+    <Image Include="C:\Users\USER\Downloads\forest1.jpg" />
+    <Image Include="C:\Users\USER\Downloads\forest2.jpg" />
     <Image Include="C:\Users\USER\Downloads\gold.png" />
+    <Image Include="C:\Users\USER\Downloads\grass1.jpg" />
+    <Image Include="C:\Users\USER\Downloads\grass2.jpg" />
+    <Image Include="C:\Users\USER\Downloads\stone1.jpg" />
+    <Image Include="C:\Users\USER\Downloads\stone2.jpg" />
+    <Image Include="C:\Users\USER\Downloads\stone3.jpg" />
     <Image Include="C:\Users\USER\Downloads\U blue horse.jpg" />
+    <Image Include="C:\Users\USER\Downloads\water.jpg" />
     <Image Include="C:\Users\USER\Downloads\wood.png" />
   </ItemGroup>
   <Import Project="$(VCTargetsPath)\Microsoft.Cpp.targets" />
