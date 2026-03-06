@@ -11,10 +11,53 @@ const float PI = 3.14159265f;
 
 struct Node { int r, c, cost; };
 
+// ===== TEXTURE =====
+void GameMap::loadTextures() {
+    if (!texGrass1.loadFromFile("grass1.jpg"))   std::cout << "ERROR: grass1.jpg not found!\n";
+    if (!texGrass2.loadFromFile("grass2.jpg"))   std::cout << "ERROR: grass2.jpg not found!\n";
+    if (!texForest1.loadFromFile("forest1.jpg")) std::cout << "ERROR: forest1.jpg not found!\n";
+    if (!texForest2.loadFromFile("forest2.jpg")) std::cout << "ERROR: forest2.jpg not found!\n";
+    if (!texWater.loadFromFile("water.jpg"))      std::cout << "ERROR: water.jpg not found!\n";
+    if (!texStone1.loadFromFile("stone1.jpg"))    std::cout << "ERROR: stone1.jpg not found!\n";
+    if (!texStone2.loadFromFile("stone2.jpg"))    std::cout << "ERROR: stone2.jpg not found!\n";
+    if (!texStone3.loadFromFile("stone3.jpg"))    std::cout << "ERROR: stone3.jpg not found!\n";
+
+    texGrass1.setRepeated(true);  texGrass2.setRepeated(true);
+    texForest1.setRepeated(true); texForest2.setRepeated(true);
+    texWater.setRepeated(true);
+    texStone1.setRepeated(true);  texStone2.setRepeated(true);
+    texStone3.setRepeated(true);
+
+    texturesLoaded = true;
+    std::cout << "Textures loaded!\n";
+}
+
+sf::Texture* GameMap::pickTexture(const HexTile& tile) {
+    switch (tile.type) {
+    case TerrainType::Grass:
+        return ((tile.gridR + tile.gridC) % 2 == 0) ? &texGrass1 : &texGrass2;
+    case TerrainType::Forest:
+        return ((tile.gridR + tile.gridC) % 2 == 0) ? &texForest1 : &texForest2;
+    case TerrainType::Water:
+        return &texWater;
+    case TerrainType::Mountain:
+        if ((tile.gridR + tile.gridC) % 3 == 0) return &texStone1;
+        else if ((tile.gridR + tile.gridC) % 3 == 1) return &texStone2;
+        else                                          return &texStone3;
+    case TerrainType::City:
+        return &texGrass1;
+    default:
+        return nullptr;
+    }
+}
+
+// ===== CONSTRUCTOR =====
 GameMap::GameMap(int r, int c) {
     this->rows = r;
     this->cols = c;
     this->m_gameStarted = false;
+
+    loadTextures();
 
     float width = std::sqrt(3.0f) * HEX_SIZE;
     float height = 2.0f * HEX_SIZE;
@@ -44,7 +87,7 @@ GameMap::GameMap(int r, int c) {
 HexTile* GameMap::getTile(int r, int c) {
     if (r >= 0 && r < rows && c >= 0 && c < cols) {
         int index = r * cols + c;
-        if (index >= 0 && index < tiles.size()) return &tiles[index];
+        if (index >= 0 && index < (int)tiles.size()) return &tiles[index];
     }
     return nullptr;
 }
@@ -87,7 +130,7 @@ void GameMap::startGame(int spawnR, int spawnC) {
     m_gameStarted = true;
 
     int idx = spawnR * cols + spawnC;
-    if (idx < 0 || idx >= tiles.size()) return;
+    if (idx < 0 || idx >= (int)tiles.size()) return;
 
     sf::FloatRect bounds = tiles[idx].shape.getGlobalBounds();
     sf::Vector2f center(bounds.left + bounds.width / 2.f, bounds.top + bounds.height / 2.f);
@@ -97,7 +140,7 @@ void GameMap::startGame(int spawnR, int spawnC) {
     generateWorldResources();
     spawnStarterResources(spawnR, spawnC);
 
-    if (idx >= 0 && idx < tiles.size()) tiles[idx].type = TerrainType::Grass;
+    if (idx >= 0 && idx < (int)tiles.size()) tiles[idx].type = TerrainType::Grass;
 
     for (auto& tile : tiles) {
         tile.isExplored = false;
@@ -118,8 +161,6 @@ void GameMap::startGame(int spawnR, int spawnC) {
 void GameMap::foundCity(int r, int c) {
     int idx = r * cols + c;
     if (idx < 0 || idx >= (int)tiles.size()) return;
-
-    // ตรวจสอบว่ายังไม่มีเมืองซ้ำในช่องนี้
     if (getCityAt(r, c) != nullptr) return;
 
     sf::FloatRect bounds = tiles[idx].shape.getGlobalBounds();
@@ -169,7 +210,7 @@ void GameMap::spawnStarterResources(int r, int c) {
 void GameMap::createCluster(TerrainType type, int startR, int startC, int clusterSize) {
     std::vector<int> frontier;
     int startIdx = startR * cols + startC;
-    if (startIdx >= 0 && startIdx < tiles.size()) {
+    if (startIdx >= 0 && startIdx < (int)tiles.size()) {
         tiles[startIdx].type = type;
         frontier.push_back(startIdx);
     }
@@ -223,53 +264,34 @@ void GameMap::revealFog(int centerR, int centerC, int sightRange) {
     if (changed) updateColors();
 }
 
-// ========================================================================
-// ระบบกวาดสายตา: เปิดหมอกให้ทหารทุกตัวและเมืองบนแผนที่พร้อมกัน
-// ========================================================================
 void GameMap::updateVision(const std::vector<Unit>& units, int currentPlayer) {
-    // 1. ปิดหมอกทั้งหมดก่อน
-    for (auto& tile : tiles) {
-        tile.isVisible = false;
-    }
+    for (auto& tile : tiles) tile.isVisible = false;
 
-    // 2. เปิดหมอกให้เมืองของเราทุกเมือง 
     for (auto& city : cities) {
         int centerR = city->getR();
         int centerC = city->getC();
-
         for (auto& tile : tiles) {
             int r1 = centerR;
             int c1 = centerC - (centerR - (centerR & 1)) / 2;
             int r2 = tile.gridR;
             int c2 = tile.gridC - (tile.gridR - (tile.gridR & 1)) / 2;
             int dist = (std::abs(r1 - r2) + std::abs(c1 - c2) + std::abs((r1 - r2) + (c1 - c2))) / 2;
-
-            if (dist <= 1) {
-                tile.isExplored = true;
-                tile.isVisible = true;
-            }
+            if (dist <= 1) { tile.isExplored = true; tile.isVisible = true; }
         }
     }
 
-    // 3. เปิดหมอกรอบทหารของเรา "ทุกตัว" บนกระดาน
     for (const auto& u : units) {
         if (u.getOwner() == currentPlayer) {
             int centerR = u.getR();
             int centerC = u.getC();
-
             for (auto& tile : tiles) {
-                if (tile.isVisible) continue; // ถ้าช่องนี้สว่างแล้วให้ข้ามเลย (ประหยัด CPU)
-
+                if (tile.isVisible) continue;
                 int r1 = centerR;
                 int c1 = centerC - (centerR - (centerR & 1)) / 2;
                 int r2 = tile.gridR;
                 int c2 = tile.gridC - (tile.gridR - (tile.gridR & 1)) / 2;
                 int dist = (std::abs(r1 - r2) + std::abs(c1 - c2) + std::abs((r1 - r2) + (c1 - c2))) / 2;
-
-                if (dist <= u.getSightRange()) {
-                    tile.isExplored = true;
-                    tile.isVisible = true;
-                }
+                if (dist <= u.getSightRange()) { tile.isExplored = true; tile.isVisible = true; }
             }
         }
     }
@@ -312,7 +334,6 @@ void GameMap::calculateValidMoves(int startR, int startC, int moveRange) {
 
             if (nr >= 0 && nr < rows && nc >= 0 && nc < cols) {
                 int nIdx = nr * cols + nc;
-
                 if (!visited[nIdx] && tiles[nIdx].isVisible) {
                     visited[nIdx] = true;
                     q.push({ nr, nc, curr.cost + 1 });
@@ -328,41 +349,59 @@ void GameMap::clearHighlight() {
 
 bool GameMap::isValidMove(int r, int c) {
     int idx = r * cols + c;
-    if (idx >= 0 && idx < tiles.size()) {
-        return tiles[idx].isPath;
-    }
+    if (idx >= 0 && idx < (int)tiles.size()) return tiles[idx].isPath;
     return false;
 }
 
+// ===== UPDATE COLORS + TEXTURE =====
 void GameMap::updateColors() {
     for (auto& tile : tiles) {
+        tile.shape.setOutlineThickness(-1.f);
+
         if (!tile.isExplored) {
+            tile.shape.setTexture(nullptr);
             tile.shape.setFillColor(sf::Color(10, 10, 10));
             tile.shape.setOutlineColor(sf::Color(20, 20, 20));
         }
-        else if (!tile.isVisible) {
-            sf::Color c;
-            switch (tile.type) {
-            case TerrainType::Grass: c = sf::Color(50, 100, 50); break;
-            case TerrainType::Water: c = sf::Color(25, 50, 100); break;
-            case TerrainType::Mountain: c = sf::Color(60, 60, 60); break;
-            case TerrainType::Forest: c = sf::Color(17, 70, 17); break;
-            case TerrainType::City: c = sf::Color(150, 120, 0); break;
-            }
-            tile.shape.setFillColor(c);
-            tile.shape.setOutlineColor(sf::Color(30, 30, 30));
-        }
         else {
-            sf::Color c;
-            switch (tile.type) {
-            case TerrainType::Grass: c = sf::Color(100, 200, 100); break;
-            case TerrainType::Water: c = sf::Color(50, 100, 200); break;
-            case TerrainType::Mountain: c = sf::Color(120, 120, 120); break;
-            case TerrainType::Forest: c = sf::Color(34, 139, 34); break;
-            case TerrainType::City: c = sf::Color(255, 215, 0); break;
-            }
-            tile.shape.setFillColor(c);
             tile.shape.setOutlineColor(sf::Color(30, 30, 30));
+
+            sf::Texture* chosenTex = pickTexture(tile);
+
+            if (chosenTex && chosenTex->getSize().x > 0) {
+                tile.shape.setTexture(chosenTex);
+                tile.shape.setFillColor(tile.isVisible
+                    ? sf::Color(255, 255, 255)
+                    : sf::Color(70, 70, 70));
+
+                sf::Vector2u texSize = chosenTex->getSize();
+                int tx = (tile.gridC * 20) % (int)texSize.x;
+                int ty = (tile.gridR * 20) % (int)texSize.y;
+                tile.shape.setTextureRect(sf::IntRect(tx, ty, (int)texSize.x, (int)texSize.y));
+            }
+            else {
+                tile.shape.setTexture(nullptr);
+                sf::Color c;
+                if (tile.isVisible) {
+                    switch (tile.type) {
+                    case TerrainType::Grass:    c = sf::Color(100, 200, 100); break;
+                    case TerrainType::Water:    c = sf::Color(50, 100, 200);  break;
+                    case TerrainType::Mountain: c = sf::Color(120, 120, 120); break;
+                    case TerrainType::Forest:   c = sf::Color(34, 139, 34);   break;
+                    case TerrainType::City:     c = sf::Color(255, 215, 0);   break;
+                    }
+                }
+                else {
+                    switch (tile.type) {
+                    case TerrainType::Grass:    c = sf::Color(50, 100, 50);  break;
+                    case TerrainType::Water:    c = sf::Color(25, 50, 100);  break;
+                    case TerrainType::Mountain: c = sf::Color(60, 60, 60);   break;
+                    case TerrainType::Forest:   c = sf::Color(17, 70, 17);   break;
+                    case TerrainType::City:     c = sf::Color(150, 120, 0);  break;
+                    }
+                }
+                tile.shape.setFillColor(c);
+            }
         }
     }
 }
@@ -394,10 +433,13 @@ void GameMap::updateHighlight(sf::Vector2f mousePos) {
 
 void GameMap::draw(sf::RenderWindow& window) {
     for (const auto& tile : tiles) window.draw(tile.shape);
+
     drawCities(window);
+
     for (const auto& tile : tiles) {
         if (tile.isPath) {
             sf::ConvexShape h = tile.shape;
+            h.setTexture(nullptr);
             h.setFillColor(sf::Color(0, 255, 0, 100));
             h.setOutlineColor(sf::Color::Green);
             h.setOutlineThickness(2.0f);
@@ -405,16 +447,15 @@ void GameMap::draw(sf::RenderWindow& window) {
         }
     }
 
-    // วาด building icon (สี่เหลี่ยมสีกลาง tile) บน tile ที่มี building
     for (const auto& tile : tiles) {
         if (tile.buildingType < 0) continue;
-        if (!tile.isVisible) continue; 
+        if (!tile.isVisible) continue;
 
         sf::FloatRect b = tile.shape.getGlobalBounds();
         float cx = b.left + b.width / 2.f;
         float cy = b.top + b.height / 2.f;
 
-        const float SZ = 12.f; 
+        const float SZ = 12.f;
         sf::RectangleShape icon(sf::Vector2f(SZ, SZ));
         icon.setOrigin(SZ / 2.f, SZ / 2.f);
         icon.setPosition(cx, cy);
@@ -427,6 +468,7 @@ void GameMap::draw(sf::RenderWindow& window) {
     for (const auto& tile : tiles) {
         if (tile.isHovered && tile.isExplored) {
             sf::ConvexShape h = tile.shape;
+            h.setTexture(nullptr);
             h.setFillColor(sf::Color::Transparent);
             h.setOutlineColor(sf::Color::White);
             h.setOutlineThickness(3.0f);
