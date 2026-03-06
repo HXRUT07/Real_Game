@@ -27,11 +27,9 @@ AIManager::AIManager() {
 void AIManager::initBase(int r, int c) {
     aiBaseR = r;
     aiBaseC = c;
-    // ดันจุดรวมพลให้ออกมานอกเมืองหน่อย จะได้ไม่กระจุก
     m_rallyR = std::max(0, std::min(49, r + (r > 25 ? -3 : 3)));
     m_rallyC = std::max(0, std::min(49, c + (c > 25 ? -3 : 3)));
 
-    // [แก้บัค AI ยืนนิ่ง] แจกเสบียงเริ่มต้นให้ AI เอาไปปั๊มทหารสู้กับเราได้!
     aiGold = 100;
     aiWood = 50;
     aiFood = 50;
@@ -94,12 +92,12 @@ bool AIManager::processTurn(std::vector<Unit>& units, GameMap& worldMap, TurnMan
         int evenDir[6][2] = { {-1,-1}, {-1,0}, {0,-1}, {0,1}, {1,-1}, {1,0} };
         int oddDir[6][2] = { {-1,0}, {-1,1}, {0,-1}, {0,1}, {1,0}, {1,1} };
 
-        // 1. เกณฑ์ทหารหรืออัปเกรดเมือง
+        // 1. เกณฑ์ทหารหรืออัปเกรดเมือง --- [NEW] เปลี่ยนชื่อเป็น Goblin
         if (shouldRecruitUnit(units)) {
             aiGold -= RECRUIT_GOLD;
             aiFood -= RECRUIT_FOOD;
-            units.emplace_back("Enemy_Lv" + std::to_string(aiCityLevel), aiBaseR, aiBaseC, 2);
-            std::cout << "[AI] Recruited unit! (" << countAIUnits(units) << " total)\n";
+            units.emplace_back("Goblin_Lv" + std::to_string(aiCityLevel), aiBaseR, aiBaseC, 2);
+            std::cout << "[GOBLIN] Recruited unit! (" << countAIUnits(units) << " total)\n";
         }
         else if (shouldUpgradeCity(units)) {
             int idx = aiCityLevel - 1;
@@ -108,21 +106,21 @@ bool AIManager::processTurn(std::vector<Unit>& units, GameMap& worldMap, TurnMan
             aiFood -= UPGRADE_FOOD[idx];
             aiCityLevel++;
             m_isAttackMode = false;
-            std::cout << "[AI] City upgraded to level " << aiCityLevel << "! Regrouping...\n";
+            std::cout << "[GOBLIN] City upgraded to level " << aiCityLevel << "! Regrouping...\n";
         }
 
         // 2. เช็คโหมดบุก
         if (!m_isAttackMode) {
             if (shouldLaunchAttack(units)) {
                 m_isAttackMode = true;
-                std::cout << "[AI] Rally complete! Launching attack with "
+                std::cout << "[GOBLIN] Rally complete! Launching attack with "
                     << countRalliedUnits(units) << " units!\n";
             }
         }
         else {
             if (countRalliedUnits(units) == 0 && countAIUnits(units) > 0) {
                 m_isAttackMode = false;
-                std::cout << "[AI] Casualties too high! Retreating to rally...\n";
+                std::cout << "[GOBLIN] Casualties too high! Retreating to rally...\n";
             }
         }
 
@@ -167,14 +165,12 @@ bool AIManager::processTurn(std::vector<Unit>& units, GameMap& worldMap, TurnMan
                 }
                 else {
                     bool foundResource = false;
-                    // [แก้บัค AI ยืนนิ่ง] ให้สแกนหาทรัพยากรที่ใกล้ที่สุดจริงๆ 
                     for (int r = 0; r < 50; r++) {
                         for (int c = 0; c < 50; c++) {
                             HexTile* t = worldMap.getTile(r, c);
                             if (t && (t->gold > 0 || t->wood > 0 || t->food > 0)) {
                                 int dist = hexDistance(units[i].getR(), units[i].getC(), r, c);
                                 int distFromRally = hexDistance(r, c, m_rallyR, m_rallyC);
-                                // ขยายรัศมีการฟาร์ม ให้ออกเดินหาของได้ไกลขึ้น
                                 if (distFromRally <= RALLY_RADIUS + 3 && dist < minDist) {
                                     minDist = dist;
                                     targetR = r; targetC = c;
@@ -184,7 +180,6 @@ bool AIManager::processTurn(std::vector<Unit>& units, GameMap& worldMap, TurnMan
                         }
                     }
                     if (!foundResource) {
-                        // ถ้าไม่มีทรัพยากรให้ฟาร์ม ให้เดินลาดตระเวนรอบจุดนัดพบ จะได้ไม่ยืนทื่อเป็นหิน
                         if (hexDistance(units[i].getR(), units[i].getC(), m_rallyR, m_rallyC) == 0) {
                             targetR = std::max(0, std::min(49, m_rallyR + (std::rand() % 5 - 2)));
                             targetC = std::max(0, std::min(49, m_rallyC + (std::rand() % 5 - 2)));
@@ -237,7 +232,7 @@ bool AIManager::processTurn(std::vector<Unit>& units, GameMap& worldMap, TurnMan
         }
 
         if (!aiMovedThisTick) {
-            turnSys.endTurn(units); // <--- AI สั่งจบเทิร์นให้เองตรงนี้แล้วครับ!
+            turnSys.endTurn(units);
             return true;
         }
 

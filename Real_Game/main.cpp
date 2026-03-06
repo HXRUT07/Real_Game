@@ -235,7 +235,7 @@ int main() {
                                 if (attempts >= 1000) { enemyR = std::min(44, spawnR + 15); enemyC = std::min(44, spawnC + 15); }
 
                                 aiManager.initBase(enemyR, enemyC);
-                                units.emplace_back("Enemy", enemyR, enemyC, 2);
+                                units.emplace_back("Goblin", enemyR, enemyC, 2);
                             }
                         }
                     }
@@ -360,7 +360,7 @@ int main() {
                             sndMove.play();
                         }
                         else if (event.key.code == sf::Keyboard::C) {
-                            units.emplace_back("Enemy", r, c, 2);
+                            units.emplace_back("Goblin", r, c, 2);
                             sndMove.play();
                         }
                     }
@@ -468,8 +468,6 @@ int main() {
             sndMove.play();
             buildMenu.clearRecruit();
         }
-
-       // ให้ CombatManager จัดการวาดและลบ Unit ให้เสร็จสรรพ
        
         combatSys.updateAndDraw(window, units, worldMap, sndDice, sndHit);
 

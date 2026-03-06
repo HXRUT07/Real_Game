@@ -3,7 +3,7 @@
 #include <iostream>
 #include <algorithm>
 
-CombatManager::CombatManager() : m_isRolling(false), m_hasFont(false), m_isArmyAttack(true) {}
+CombatManager::CombatManager() : m_isRolling(false), m_hasFont(false), m_isArmyAttack(true), m_diceCalculated(false) {}
 
 void CombatManager::setFont(const sf::Font& font) {
     m_font = font;
@@ -27,16 +27,50 @@ void CombatManager::initiateCombat(int atkR, int atkC, int defR, int defC, int a
     m_attackerOwner = attackerOwner;
     m_isArmyAttack = isArmyAttack;
 
-    m_finalAtkRoll = rollDiceRisk(3);
-    m_finalDefRoll = rollDiceRisk(2);
-
     m_isRolling = true;
+    m_diceCalculated = false; // รีเซ็ตเพื่อให้นับและทอยใหม่ใน updateAndDraw
     m_animTimer.restart();
     diceSound.play();
 }
 
 void CombatManager::updateAndDraw(sf::RenderWindow& window, std::vector<Unit>& units, GameMap& worldMap, sf::Sound& diceSound, sf::Sound& hitSound) {
     if (!m_isRolling) return;
+
+    // ==============================================================
+    // นับทหาร เก็บชื่อ และทอยแต้มแยกทีละตัว (ทำแค่เฟรมแรกของการต่อสู้)
+    // ==============================================================
+    if (!m_diceCalculated) {
+        m_atkUnitNames.clear();
+        m_defUnitNames.clear();
+        m_atkDiceValues.clear();
+        m_defDiceValues.clear();
+
+        // กวาดนับทหารที่อยู่ในช่องบุก และ ช่องรับ เพื่อเก็บชื่อ
+        for (const auto& u : units) {
+            if (u.getR() == m_atkStartR && u.getC() == m_atkStartC && u.getOwner() == m_attackerOwner) {
+                m_atkUnitNames.push_back(u.getName());
+            }
+            if (u.getR() == m_defTargetR && u.getC() == m_defTargetC && u.getOwner() != m_attackerOwner) {
+                m_defUnitNames.push_back(u.getName());
+            }
+        }
+
+        // กันเหนียว (ขั้นต่ำต้องมี 1 ตัว)
+        if (m_atkUnitNames.empty()) m_atkUnitNames.push_back("Atk_Ghost");
+        if (m_defUnitNames.empty()) m_defUnitNames.push_back("Def_Ghost");
+
+        // ทอยเต๋าแยกทีละตัวเก็บไว้เลยเพื่อเอาไปวาด
+        for (size_t i = 0; i < m_atkUnitNames.size(); ++i) m_atkDiceValues.push_back((std::rand() % 6) + 1);
+        for (size_t i = 0; i < m_defUnitNames.size(); ++i) m_defDiceValues.push_back((std::rand() % 6) + 1);
+
+        // คำนวณ m_finalAtkRoll, m_finalDefRoll ใหม่ (แต้มสูงสุดของกองทัพ) เพื่อตัดสินผล
+        m_finalAtkRoll = 0;
+        for (int v : m_atkDiceValues) if (v > m_finalAtkRoll) m_finalAtkRoll = v;
+        m_finalDefRoll = 0;
+        for (int v : m_defDiceValues) if (v > m_finalDefRoll) m_finalDefRoll = v;
+
+        m_diceCalculated = true; // ป้องกันการนับซ้ำ
+    }
 
     float elapsed = m_animTimer.getElapsedTime().asSeconds();
 
@@ -50,7 +84,16 @@ void CombatManager::updateAndDraw(sf::RenderWindow& window, std::vector<Unit>& u
 
         if (atkIt != units.end() && defIt != units.end()) {
             if (m_finalAtkRoll > m_finalDefRoll) {
-                // ฝ่ายบุกชนะ!
+                // ระบบปล้นเสบียง: ฝ่ายบุกชนะ!
+                if (m_attackerOwner == 1) {
+                    City* myCity = worldMap.getFirstCity();
+                    if (myCity) {
+                        myCity->addGold(20);
+                        myCity->addFood(50);
+                        std::cout << "[COMBAT] Victory! Looted 20 Gold and 50 Food from Goblin corpse!\n";
+                    }
+                }
+
                 units.erase(defIt);
 
                 bool tileEmpty = true;
@@ -87,7 +130,16 @@ void CombatManager::updateAndDraw(sf::RenderWindow& window, std::vector<Unit>& u
                 }
             }
             else {
-                // ฝ่ายรับชนะ!
+                // ระบบปล้นเสบียง: ฝ่ายรับชนะ! (คนบุกตาย)
+                if (m_attackerOwner == 2) {
+                    City* myCity = worldMap.getFirstCity();
+                    if (myCity) {
+                        myCity->addGold(20);
+                        myCity->addFood(50);
+                        std::cout << "[COMBAT] Defense Successful! Looted 20 Gold and 50 Food from dead Goblin attacker!\n";
+                    }
+                }
+
                 units.erase(atkIt);
             }
         }
@@ -100,46 +152,79 @@ void CombatManager::updateAndDraw(sf::RenderWindow& window, std::vector<Unit>& u
     darkOverlay.setFillColor(sf::Color(0, 0, 0, 180));
     window.draw(darkOverlay);
 
-    if (elapsed < 1.5f) {
-        m_displayAtkRoll = (std::rand() % 6) + 1;
-        m_displayDefRoll = (std::rand() % 6) + 1;
-    }
-    else {
-        m_displayAtkRoll = m_finalAtkRoll;
-        m_displayDefRoll = m_finalDefRoll;
-    }
-
+    // ==============================================================
+    // วาดหน้าจอการต่อสู้ใหม่แบบแยกตัว
+    // ==============================================================
     std::string titleStr = "COMBAT PHASE";
-    std::string atkStr = (m_attackerOwner == 1 ? "PLAYER (Attacker)\nRolls 3 Dice" : "AI (Attacker)\nRolls 3 Dice");
-    std::string defStr = (m_attackerOwner == 1 ? "AI (Defender)\nRolls 2 Dice" : "PLAYER (Defender)\nRolls 2 Dice");
-
     sf::Text titleText(titleStr, m_font, 50);
     titleText.setFillColor(sf::Color::Yellow);
-    titleText.setPosition(window.getSize().x / 2.0f - 200, 100);
+    titleText.setPosition(window.getSize().x / 2.0f - 200, 50);
+    window.draw(titleText);
 
-    sf::Text atkSideText(atkStr, m_font, 30);
+    // --- [NEW] เปลี่ยนชื่อเป็น GOBLIN ---
+    std::string atkTitle = (m_attackerOwner == 1 ? "PLAYER (Attacker)" : "GOBLIN (Attacker)");
+    std::string defTitle = (m_attackerOwner == 1 ? "GOBLIN (Defender)" : "PLAYER (Defender)");
+
+    // วาด VS ตรงกลาง
+    sf::Text VS_text("VS", m_font, 50);
+    VS_text.setFillColor(sf::Color::White);
+    VS_text.setPosition(window.getSize().x / 2.0f - 30, 140);
+    window.draw(VS_text);
+
+    // ฝั่งบุก (Attacker) - ด้านซ้าย
+    sf::Text atkSideText(atkTitle, m_font, 30);
     atkSideText.setFillColor(sf::Color(255, 100, 100));
-    atkSideText.setPosition(window.getSize().x / 4.0f - 100, 300);
+    atkSideText.setPosition(window.getSize().x / 4.0f - 100, 150);
+    window.draw(atkSideText);
 
-    sf::Text atkRollText(std::to_string(m_displayAtkRoll), m_font, 100);
-    atkRollText.setFillColor(sf::Color::White);
-    atkRollText.setPosition(window.getSize().x / 4.0f, 400);
-
-    sf::Text vsText("VS", m_font, 40);
-    vsText.setFillColor(sf::Color::White);
-    vsText.setPosition(window.getSize().x / 2.0f - 25, 420);
-
-    sf::Text defSideText(defStr, m_font, 30);
+    // ฝั่งรับ (Defender) - ด้านขวา
+    sf::Text defSideText(defTitle, m_font, 30);
     defSideText.setFillColor(sf::Color(100, 150, 255));
-    defSideText.setPosition(window.getSize().x * 3.0f / 4.0f - 100, 300);
+    defSideText.setPosition(window.getSize().x * 3.0f / 4.0f - 100, 150);
+    window.draw(defSideText);
 
-    sf::Text defRollText(std::to_string(m_displayDefRoll), m_font, 100);
-    defRollText.setFillColor(sf::Color::White);
-    defRollText.setPosition(window.getSize().x * 3.0f / 4.0f, 400);
+    float startY = 220.0f; // จุดเริ่มวาดรายการแรก
+    float spacingY = 50.0f; // ระยะห่างแนวตั้ง
 
-    window.draw(titleText); window.draw(atkSideText); window.draw(atkRollText);
-    window.draw(vsText); window.draw(defSideText); window.draw(defRollText);
+    // วนวาดรายการ Attacker ทีละตัว
+    for (size_t i = 0; i < m_atkUnitNames.size(); ++i) {
+        // วาดชื่อทหาร
+        sf::Text nameText(m_atkUnitNames[i], m_font, 25);
+        nameText.setFillColor(sf::Color::White);
+        nameText.setPosition(window.getSize().x / 4.0f - 150, startY + i * spacingY);
+        window.draw(nameText);
 
+        // วาดลูกเต๋า (ถ้ายังทอยอยู่ให้สุ่มโชว์ ถ้าทอยเสร็จให้โชว์แต้มจริง)
+        sf::Text diceText;
+        if (elapsed < 1.5f) diceText.setString(std::to_string((std::rand() % 6) + 1));
+        else diceText.setString(std::to_string(m_atkDiceValues[i]));
+        diceText.setFont(m_font);
+        diceText.setCharacterSize(25);
+        diceText.setFillColor(sf::Color(255, 215, 0)); // สีทอง
+        diceText.setPosition(window.getSize().x / 4.0f + 100, startY + i * spacingY);
+        window.draw(diceText);
+    }
+
+    // วนวาดรายการ Defender ทีละตัว
+    for (size_t i = 0; i < m_defUnitNames.size(); ++i) {
+        // วาดชื่อทหาร
+        sf::Text nameText(m_defUnitNames[i], m_font, 25);
+        nameText.setFillColor(sf::Color::White);
+        nameText.setPosition(window.getSize().x * 3.0f / 4.0f - 150, startY + i * spacingY);
+        window.draw(nameText);
+
+        // วาดลูกเต๋า
+        sf::Text diceText;
+        if (elapsed < 1.5f) diceText.setString(std::to_string((std::rand() % 6) + 1));
+        else diceText.setString(std::to_string(m_defDiceValues[i]));
+        diceText.setFont(m_font);
+        diceText.setCharacterSize(25);
+        diceText.setFillColor(sf::Color(255, 215, 0)); // สีทอง
+        diceText.setPosition(window.getSize().x * 3.0f / 4.0f + 100, startY + i * spacingY);
+        window.draw(diceText);
+    }
+
+    // ส่วนแสดงผลสรุป (ย้ายลงมาล่างสุด)
     if (elapsed >= 1.5f) {
         sf::Text resultText("", m_font, 60);
         if (m_finalAtkRoll > m_finalDefRoll) {
@@ -150,7 +235,8 @@ void CombatManager::updateAndDraw(sf::RenderWindow& window, std::vector<Unit>& u
             resultText.setString("DEFENDER WINS!");
             resultText.setFillColor(sf::Color::Red);
         }
-        resultText.setPosition(window.getSize().x / 2.0f - 220, 600);
+        // ย้ายตำแหน่งไปอยู่ล่างๆ หน้าจอ
+        resultText.setPosition(window.getSize().x / 2.0f - 220, window.getSize().y - 150);
         window.draw(resultText);
     }
 }
