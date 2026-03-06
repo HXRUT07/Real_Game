@@ -235,7 +235,7 @@ int main() {
                                 if (attempts >= 1000) { enemyR = std::min(44, spawnR + 15); enemyC = std::min(44, spawnC + 15); }
 
                                 aiManager.initBase(enemyR, enemyC);
-                                units.emplace_back("Enemy", enemyR, enemyC, 2);
+                                units.emplace_back("Goblin", enemyR, enemyC, 2);
                             }
                         }
                     }
@@ -360,7 +360,7 @@ int main() {
                             sndMove.play();
                         }
                         else if (event.key.code == sf::Keyboard::C) {
-                            units.emplace_back("Enemy", r, c, 2);
+                            units.emplace_back("Goblin", r, c, 2);
                             sndMove.play();
                         }
                     }
@@ -453,6 +453,9 @@ int main() {
 
         // 4. วาดทหารทับเมืองสุดท้าย
         for (auto& unit : units) {
+            unit.draw(window);
+        }
+        worldMap.drawCities(window);
             if (unit.getOwner() == 1) {
                 int stack = 0;
                 for (auto& u2 : units)
@@ -482,6 +485,7 @@ int main() {
             sndMove.play();
             buildMenu.clearRecruit();
         }
+       
 
         combatSys.updateAndDraw(window, units, worldMap, sndDice, sndHit);
 
