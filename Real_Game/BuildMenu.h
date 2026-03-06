@@ -24,6 +24,11 @@ public:
     bool didRecruit() const { return recruitedThisFrame; }
     void clearRecruit() { recruitedThisFrame = false; }
 
+    bool isPendingTileSelect() const { return pendingBuildIdx != -1; }
+    int  getPendingBuildIdx()  const { return pendingBuildIdx; }
+    void confirmTileSelect(bool success); // เรียกจาก main หลังคลิก tile
+    void cancelTileSelect();              // เรียกเมื่อ right-click หรือยกเลิก
+
 private:
     City* city = nullptr;
     std::vector<Unit>* units = nullptr;
@@ -58,6 +63,8 @@ private:
     int feedbackTimer = 0;
     int lastBuiltIdx = -1;
     bool recruitedThisFrame = false;
+
+    int pendingBuildIdx = -1;
 
     void initSlots();
     void updateSlot(int i);

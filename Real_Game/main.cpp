@@ -456,6 +456,7 @@ int main() {
             unit.draw(window);
         }
         worldMap.drawCities(window);
+        for (auto& unit : units) {
             if (unit.getOwner() == 1) {
                 int stack = 0;
                 for (auto& u2 : units)

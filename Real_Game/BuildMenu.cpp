@@ -3,14 +3,15 @@
 
 static const sf::Color COL_BG = sf::Color(12, 10, 6, 230);
 static const sf::Color COL_TOPBAR = sf::Color(20, 16, 8, 255);
+static const sf::Color COL_TOPBAR_WAIT = sf::Color(20, 50, 90, 255);
 static const sf::Color COL_GOLD = sf::Color(200, 170, 90, 255);
 static const sf::Color COL_DIM = sf::Color(160, 130, 45, 200);
 static const sf::Color COL_CARD = sf::Color(18, 14, 8, 240);
 static const sf::Color COL_BTN_OK = sf::Color(45, 85, 25);
 static const sf::Color COL_BTN_NO = sf::Color(70, 35, 25);
+static const sf::Color COL_BTN_WAIT = sf::Color(20, 60, 100);
 static const sf::Color COL_RIM = sf::Color(160, 130, 45, 200);
-static const sf::Color COL_RECRUIT = sf::Color(30, 60, 100);  // [เพิ่ม] สีปุ่มเกณฑ์ทหาร
-
+static const sf::Color COL_RECRUIT = sf::Color(30, 60, 100);
 BuildMenu::BuildMenu(float winW, float winH) {
     panelW = 320.f;
     panelH = winH - 16.f;
@@ -171,7 +172,7 @@ void BuildMenu::updateSlot(int i) {
             slots[i].btnRecruitText.setFillColor(sf::Color(120, 120, 160));
             slots[i].btnRecruitText.setString("Need 20G 50F");
         }
-    }  // [แก้] เพิ่ม } ปิด if(i==1) ที่หายไป
+    } 
 }
 
 void BuildMenu::setCity(City* c) {
