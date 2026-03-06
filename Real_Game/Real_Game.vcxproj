@@ -168,6 +168,8 @@
   </ItemGroup>
   <ItemGroup>
     <Image Include="Blue Castle.png" />
+    <Image Include="C:\Users\USER\Downloads\army.png" />
+    <Image Include="C:\Users\USER\Downloads\blueknight.png" />
     <Image Include="C:\Users\USER\Downloads\food.png" />
     <Image Include="C:\Users\USER\Downloads\forest1.jpg" />
     <Image Include="C:\Users\USER\Downloads\forest2.jpg" />

@@ -57,6 +57,9 @@
     <ClCompile Include="BuildMenu.cpp">
       <Filter>Source Files</Filter>
     </ClCompile>
+    <ClCompile Include="UpkeepManager.cpp">
+      <Filter>Source Files</Filter>
+    </ClCompile>
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="GameMap.h">
@@ -101,6 +104,9 @@
     <ClInclude Include="CityPanel.h">
       <Filter>Header Files</Filter>
     </ClInclude>
+    <ClInclude Include="UpkeepManager.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
   </ItemGroup>
   <ItemGroup>
     <Image Include="C:\Users\USER\Downloads\U blue horse.jpg">
@@ -116,6 +122,36 @@
       <Filter>Resource Files</Filter>
     </Image>
     <Image Include="C:\Users\USER\Downloads\food.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="C:\Users\USER\Downloads\forest1.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="C:\Users\USER\Downloads\forest2.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="C:\Users\USER\Downloads\grass1.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="C:\Users\USER\Downloads\grass2.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="C:\Users\USER\Downloads\stone1.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="C:\Users\USER\Downloads\stone2.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="C:\Users\USER\Downloads\stone3.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="C:\Users\USER\Downloads\water.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="C:\Users\USER\Downloads\army.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="C:\Users\USER\Downloads\blueknight.png">
       <Filter>Resource Files</Filter>
     </Image>
   </ItemGroup>

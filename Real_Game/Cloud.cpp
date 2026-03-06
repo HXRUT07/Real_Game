@@ -3,7 +3,6 @@
 #include <cmath>
 #include <algorithm>
 
-// เปรมทำ - ระบบก้อนเมฆ pixel
 static float randFloat(float lo, float hi) {
     return lo + (hi - lo) * (std::rand() / (float)RAND_MAX);
 }
@@ -30,7 +29,6 @@ void Cloud::reset(bool spawnOffscreen) {
     alpha = randFloat(35.f, 75.f);
     puffs.clear();
 
-    // เปรมทำ - สุ่มชนิดเมฆตามธรรมชาติ
     int cloudType = std::rand() % 3;
 
     if (cloudType == 0) {
@@ -50,7 +48,7 @@ void Cloud::reset(bool spawnOffscreen) {
         }
     }
     else if (cloudType == 1) {
-        // Stratus - เมฆแผ่นยาวแนวนอน บางๆ
+        // Stratus - เมฆแผ่นยาวแนวนอน
         int puffCount = 8 + std::rand() % 6;
         for (int i = 0; i < puffCount; ++i) {
             CloudPuff p;
@@ -66,7 +64,7 @@ void Cloud::reset(bool spawnOffscreen) {
         alpha *= 0.7f;
     }
     else {
-        // Cirrus - เมฆเส้นๆ บางมาก อยู่สูง
+        // Cirrus - เมฆเส้นๆ บางมาก
         int puffCount = 10 + std::rand() % 8;
         for (int i = 0; i < puffCount; ++i) {
             CloudPuff p;
@@ -81,14 +79,11 @@ void Cloud::reset(bool spawnOffscreen) {
         }
         alpha *= 0.5f;
     }
-    // เปรมทำ - จบ
 }
 
 void Cloud::update(float dt) {
-    if (movingRight)
-        position.x += speed * dt;
-    else
-        position.x -= speed * dt;
+    if (movingRight) position.x += speed * dt;
+    else             position.x -= speed * dt;
 }
 
 bool Cloud::isOffscreen() const {
@@ -97,14 +92,34 @@ bool Cloud::isOffscreen() const {
 }
 
 void Cloud::draw(sf::RenderWindow& window, float zoomLevel) {
-    // เปรมทำ - CloudSystem จัดการ zoom แล้ว วาดตรงๆ ได้เลย
+    // เปรมทำ - ยิ่งซูมออก puff ยิ่งใหญ่และทึบขึ้น เหมือนมองจากเครื่องบิน
+    float zoomScale = 1.f;
+    float zoomAlpha = 1.f;
+
+    if (zoomLevel <= 1.5f) {
+        zoomScale = 1.f;
+        zoomAlpha = 0.6f;
+    }
+    else if (zoomLevel <= 3.f) {
+        float t = (zoomLevel - 1.5f) / 1.5f; // 0->1
+        zoomScale = 1.f + t * 2.5f;           // 1x -> 3.5x
+        zoomAlpha = 0.6f + t * 0.4f;          // 0.6 -> 1.0
+    }
+    else {
+        float t = std::min(1.f, (zoomLevel - 3.f) / 3.f); // 0->1
+        zoomScale = 3.5f + t * 4.f;           // 3.5x -> 7.5x ใหญ่มากเหมือนเมฆจากเครื่องบิน
+        zoomAlpha = 1.f;
+    }
+
     for (const auto& p : puffs) {
         sf::RectangleShape rect;
-        float size = p.radius;
+        float size = p.radius * zoomScale;
         rect.setSize(sf::Vector2f(size, size));
         rect.setOrigin(size / 2.f, size / 2.f);
         rect.setPosition(position.x + p.offset.x, position.y + p.offset.y);
-        rect.setFillColor(sf::Color(220, 230, 255, (sf::Uint8)alpha));
+
+        sf::Uint8 a = (sf::Uint8)std::min(255.f, alpha * zoomAlpha * 2.5f);
+        rect.setFillColor(sf::Color(220, 230, 255, a));
         window.draw(rect);
     }
     // เปรมทำ - จบ
@@ -116,8 +131,8 @@ void Cloud::draw(sf::RenderWindow& window, float zoomLevel) {
 CloudSystem::CloudSystem(float screenW, float screenH, int count)
     : screenWidth(screenW), screenHeight(screenH)
 {
-    // เปรมทำ - สร้างเมฆสูงสุด 30 ก้อนไว้ก่อน
-    for (int i = 0; i < 30; ++i) {
+    // เปรมทำ - สร้างเมฆ 45 ก้อน (1.5x จากเดิม 30)
+    for (int i = 0; i < 45; ++i) {
         clouds.emplace_back(screenW, screenH);
     }
 }
@@ -125,40 +140,33 @@ CloudSystem::CloudSystem(float screenW, float screenH, int count)
 void CloudSystem::update(float dt) {
     for (auto& c : clouds) {
         c.update(dt);
-        if (c.isOffscreen()) {
-            c.reset(false);
-        }
+        if (c.isOffscreen()) c.reset(false);
     }
 }
 
 void CloudSystem::draw(sf::RenderWindow& window, float zoomLevel) {
-    // เปรมทำ - คำนวณจำนวนเมฆตามระดับซูม
-    // zoomLevel <= 1.0 = ไม่โชว์
-    // zoomLevel 1.0-2.0 = 0-8 ก้อน
-    // zoomLevel 2.0-4.0 = 8-20 ก้อน
-    // zoomLevel 4.0+    = 20-30 ก้อน หนาแน่นมาก
-
+    // เปรมทำ - คำนวณจำนวนเมฆที่โชว์ตาม zoom
+    // ยิ่งซูมออก ยิ่งโชว์เมฆเยอะขึ้น จนบังมิดเหมือนมองจากเครื่องบิน
     int cloudsToShow = 0;
 
     if (zoomLevel <= 1.0f) {
         cloudsToShow = 0;
     }
     else if (zoomLevel <= 2.0f) {
-        float t = (zoomLevel - 1.0f) / 1.0f; // 0->1
-        cloudsToShow = (int)(t * 8.f);
+        float t = (zoomLevel - 1.0f) / 1.0f;
+        cloudsToShow = (int)(t * 10.f);        // 0->10
     }
-    else if (zoomLevel <= 4.0f) {
-        float t = (zoomLevel - 2.0f) / 2.0f; // 0->1
-        cloudsToShow = 8 + (int)(t * 12.f);
+    else if (zoomLevel <= 3.5f) {
+        float t = (zoomLevel - 2.0f) / 1.5f;
+        cloudsToShow = 10 + (int)(t * 20.f);   // 10->30
     }
     else {
-        float t = std::min(1.f, (zoomLevel - 4.0f) / 2.0f); // 0->1
-        cloudsToShow = 20 + (int)(t * 10.f);
+        float t = std::min(1.f, (zoomLevel - 3.5f) / 2.0f);
+        cloudsToShow = 30 + (int)(t * 15.f);   // 30->45 บังมิด
     }
 
     cloudsToShow = std::min(cloudsToShow, (int)clouds.size());
 
-    // วาดเฉพาะจำนวนที่คำนวณได้
     for (int i = 0; i < cloudsToShow; ++i) {
         clouds[i].draw(window, zoomLevel);
     }

@@ -1,55 +1,49 @@
 ﻿#pragma once
 #include <SFML/Graphics.hpp>
-#include <string> // <--- [สำคัญ] อย่าลืม include string
+#include <string>
 
 class Unit {
 public:
-    // Constructor: รับชื่อเพิ่มเข้ามา
-    // รับ owner เพิ่มเข้ามา (1 = Player 1, 2 = Player 2)
     Unit(std::string name, int startR, int startC, int owner);
 
-    // ฟังก์ชันดึงค่าเจ้าของ
     int getOwner() const { return m_owner; }
-
-    // วาดตัวละคร
-    void draw(sf::RenderWindow& window);
-
-    // การเคลื่อนที่
+    void draw(sf::RenderWindow& window, int stackCount = 1);
     void moveTo(int r, int c);
 
-    // ระบบ Action Point
     bool hasAP() const { return m_currentAP > 0; }
     void consumeAP(int cost) { m_currentAP -= cost; }
     void resetAP() { m_currentAP = m_maxAP; }
     int getMoveRange() const { return m_moveRange; }
     int getSightRange() const { return m_sightRange; }
 
-    // Getter พื้นฐาน
     int getR() const { return m_gridR; }
     int getC() const { return m_gridC; }
-    sf::Vector2f getPosition() const { return m_shape.getPosition(); }
+    sf::Vector2f getPosition() const { return m_pos; }
 
-    // Getter สำหรับ UI (เอาไว้โชว์ชื่อและ AP ในแถบขวา)
     std::string getName() const { return m_name; }
     int getCurrentAP() const { return m_currentAP; }
     int getMaxAP() const { return m_maxAP; }
 
-    // เช็คว่าเมาส์คลิกโดนตัวไหม
     bool isClicked(sf::Vector2f mousePos);
+    static bool loadTextures();
 
 private:
     int m_owner;
-
-    sf::CircleShape m_shape;
-
-    std::string m_name; // ตัวแปรเก็บชื่อยูนิต
+    std::string m_name;
     int m_gridR, m_gridC;
+    sf::Vector2f m_pos;
 
-    // Stats
-    int m_maxAP = 2;       // เดินได้ 2 ครั้งต่อเทิร์น
+    int m_maxAP = 2;
     int m_currentAP = 2;
-    int m_moveRange = 1;   // รัศมีเดิน 1 ช่อง
-    int m_sightRange = 1;  // รัศมีมองเห็น 1 ช่อง
+    int m_moveRange = 1;
+    int m_sightRange = 1;
+
+    // เปรมทำ - ใช้ CircleShape + texture แทน Sprite
+    sf::CircleShape m_circle;
+
+    static sf::Texture s_texKnight;
+    static sf::Texture s_texArmy;
+    static bool s_texturesLoaded;
 
     void updateScreenPosition();
 };

@@ -84,8 +84,8 @@ int main() {
 
     BuildMenu buildMenu(window.getSize().x, window.getSize().y);
 
-    // เปรมทำ - ระบบก้อนเมฆ
-    CloudSystem cloudSystem((float)window.getSize().x, (float)window.getSize().y, 6);
+    // เปรมทำ - ระบบก้อนเมฆ 45 ก้อน (1.5x)
+    CloudSystem cloudSystem((float)window.getSize().x, (float)window.getSize().y, 45);
     sf::Clock cloudClock;
     // เปรมทำ - จบ
 
@@ -94,11 +94,11 @@ int main() {
 
     buildMenu.setUnits(&units);
 
-    Unit* selectedUnit = nullptr;  // ตัวที่กำลังเลือกอยู่
-    bool isGameRunning = false;    // ตัวแปรเช็คว่าจบช่วงเลือกจุดเกิดหรือยัง
-    int unitNameCounter = 1;       // ตัวนับสำหรับตั้งชื่อ Unit อัตโนมัติ
-    TurnManager turnSys(2); // สร้างระบบเทิร์นสำหรับ 2 ผู้เล่น
-    
+    Unit* selectedUnit = nullptr;
+    bool isGameRunning = false;
+    int unitNameCounter = 1;
+    TurnManager turnSys(2);
+
     int currentTurnNumber = 1;
 
     std::vector<Unit*> currentStack;
@@ -427,10 +427,12 @@ int main() {
         // เปรมทำ - จบ
 
         window.clear(sf::Color(20, 20, 30));
-
         window.setView(camera.getView());
+
+        // 1. วาดแผนที่
         worldMap.draw(window);
 
+        // 2. วาดไฮไลท์เป้าหมายสีแดง
         if (leadUnit != nullptr && turnSys.getCurrentPlayer() == 1) {
             for (auto& u : units) {
                 if (u.getOwner() == 2 && worldMap.isValidMove(u.getR(), u.getC())) {
@@ -446,29 +448,33 @@ int main() {
             }
         }
 
+        // 3. วาดเมืองก่อน
+        worldMap.drawCities(window);
+
+        // 4. วาดทหารทับเมืองสุดท้าย
         for (auto& unit : units) {
             if (unit.getOwner() == 1) {
-                unit.draw(window);
+                int stack = 0;
+                for (auto& u2 : units)
+                    if (u2.getOwner() == 1 && u2.getR() == unit.getR() && u2.getC() == unit.getC())
+                        stack++;
+                unit.draw(window, stack);
             }
             else {
                 HexTile* tile = worldMap.getTile(unit.getR(), unit.getC());
-                if (tile != nullptr && tile->isVisible) {
-                    unit.draw(window);
-                }
+                if (tile != nullptr && tile->isVisible)
+                    unit.draw(window, 1);
             }
         }
-        worldMap.drawCities(window);
 
+        // 5. วาด UI
         gui.updateTurnInfo(turnSys.getCurrentPlayer(), currentTurnNumber);
-
         City* myCity = worldMap.getFirstCity();
         if (myCity) gui.updateResourceBar(myCity->getWood(), myCity->getGold(), myCity->getFood());
 
         window.setView(window.getDefaultView());
 
-        if (worldMap.isGameStarted()) {
-            gui.draw(window);
-        }
+        if (worldMap.isGameStarted()) gui.draw(window);
         cityPanel.draw(window);
         buildMenu.draw(window);
 
@@ -477,11 +483,9 @@ int main() {
             buildMenu.clearRecruit();
         }
 
-       // ให้ CombatManager จัดการวาดและลบ Unit ให้เสร็จสรรพ
-       
         combatSys.updateAndDraw(window, units, worldMap, sndDice, sndHit);
 
-        // เปรมทำ - วาดเมฆทับหน้าสุด
+        // เปรมทำ - วาดเมฆทับหน้าสุด (ไม่มี overlay สีดำ ใช้เมฆหนาแทน)
         window.setView(window.getDefaultView());
         cloudSystem.draw(window, camera.getZoomLevel());
         // เปรมทำ - จบ
