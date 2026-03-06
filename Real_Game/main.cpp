@@ -447,15 +447,7 @@ int main() {
         }
 
         for (auto& unit : units) {
-            if (unit.getOwner() == 1) {
-                unit.draw(window);
-            }
-            else {
-                HexTile* tile = worldMap.getTile(unit.getR(), unit.getC());
-                if (tile != nullptr && tile->isVisible) {
-                    unit.draw(window);
-                }
-            }
+            unit.draw(window);
         }
         worldMap.drawCities(window);
 
