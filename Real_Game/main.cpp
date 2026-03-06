@@ -98,11 +98,7 @@ int main() {
     bool isGameRunning = false;    // ตัวแปรเช็คว่าจบช่วงเลือกจุดเกิดหรือยัง
     int unitNameCounter = 1;       // ตัวนับสำหรับตั้งชื่อ Unit อัตโนมัติ
     TurnManager turnSys(2); // สร้างระบบเทิร์นสำหรับ 2 ผู้เล่น
-    Unit* selectedUnit = nullptr;
-    bool isGameRunning = false;
-    int unitNameCounter = 1;
-    TurnManager turnSys(2);
-
+    
     int currentTurnNumber = 1;
 
     std::vector<Unit*> currentStack;
