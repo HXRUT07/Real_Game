@@ -108,6 +108,8 @@ int main() {
     // จองพื้นที่ล่วงหน้า 1,000 ตัว ป้องกันบัค C++ ย้ายที่อยู่หน่วยความจำ (Memory Dangling)
     units.reserve(1000);
 
+    buildMenu.setUnits(&units);
+
     Unit* selectedUnit = nullptr;  // ตัวที่กำลังเลือกอยู่
     bool isGameRunning = false;    // ตัวแปรเช็คว่าจบช่วงเลือกจุดเกิดหรือยัง
     int unitNameCounter = 1;       // ตัวนับสำหรับตั้งชื่อ Unit อัตโนมัติ
@@ -574,9 +576,12 @@ int main() {
         cityPanel.draw(window);
         buildMenu.draw(window);
 
-        cityPanel.draw(window);
+        if (buildMenu.didRecruit()) {
+            sndMove.play();
+            buildMenu.clearRecruit();
+        }
 
-        // ให้ CombatManager จัดการวาดและลบ Unit ให้เสร็จสรรพ
+       // ให้ CombatManager จัดการวาดและลบ Unit ให้เสร็จสรรพ
        
         combatSys.updateAndDraw(window, units, worldMap, sndDice, sndHit);
 

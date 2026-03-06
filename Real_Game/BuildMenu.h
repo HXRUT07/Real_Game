@@ -1,6 +1,8 @@
 ﻿#pragma once
 #include <SFML/Graphics.hpp>
 #include "City.h"
+#include "Unit.h"
+#include <vector>
 
 class BuildMenu {
 public:
@@ -10,6 +12,8 @@ public:
     void clear();
     bool isOpen() const { return city != nullptr; }
 
+    void setUnits(std::vector<Unit>* u) { units = u; }
+
     void handleEvent(const sf::Event& event);
     void draw(sf::RenderWindow& window);
 
@@ -17,8 +21,12 @@ public:
     int getLastBuiltIndex() const { return lastBuiltIdx; }
     void clearLastBuilt() { lastBuiltIdx = -1; }
 
+    bool didRecruit() const { return recruitedThisFrame; }
+    void clearRecruit() { recruitedThisFrame = false; }
+
 private:
     City* city = nullptr;
+    std::vector<Unit>* units = nullptr;
     float panelX, panelY, panelW, panelH;
     sf::Font font;
 
@@ -35,11 +43,13 @@ private:
     struct Slot {
         sf::RectangleShape card;
         sf::RectangleShape btnBuild;
+        sf::RectangleShape btnRecruit;
         sf::Text nameText;
         sf::Text descText;
         sf::Text countText;
         sf::Text costText;
         sf::Text btnText;
+        sf::Text btnRecruitText;
     };
     Slot slots[4];
 
@@ -47,6 +57,7 @@ private:
     sf::Text feedbackText;
     int feedbackTimer = 0;
     int lastBuiltIdx = -1;
+    bool recruitedThisFrame = false;
 
     void initSlots();
     void updateSlot(int i);

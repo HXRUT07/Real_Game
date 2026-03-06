@@ -53,6 +53,10 @@ struct Building {
         return { 0, 0, 0 };
     }
 
+    BuildingCost getRecruitCost() const {
+        return { 20, 0, 50 };
+    }
+
     // ผลผลิตต่อเทิร์น (Barracks ไม่ผลิตอะไร)
     int goldPerTurn() const { return type == BuildingType::Village ? 10 * count : 0; }
     int foodPerTurn() const { return type == BuildingType::Restaurant ? 10 * count : 0; }

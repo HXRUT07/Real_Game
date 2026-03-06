@@ -8,7 +8,8 @@ static const sf::Color COL_DIM = sf::Color(160, 130, 45, 200);
 static const sf::Color COL_CARD = sf::Color(18, 14, 8, 240);
 static const sf::Color COL_BTN_OK = sf::Color(45, 85, 25);
 static const sf::Color COL_BTN_NO = sf::Color(70, 35, 25);
-static const sf::Color COL_RIM = sf::Color(160, 130, 45, 200); // ← สีขอบทอง (ปรับได้)
+static const sf::Color COL_RIM = sf::Color(160, 130, 45, 200);
+static const sf::Color COL_RECRUIT = sf::Color(30, 60, 100);  // [เพิ่ม] สีปุ่มเกณฑ์ทหาร
 
 BuildMenu::BuildMenu(float winW, float winH) {
     panelW = 320.f;
@@ -54,7 +55,7 @@ BuildMenu::BuildMenu(float winW, float winH) {
 }
 
 void BuildMenu::initSlots() {
-    float cardH = 130.f;
+    float cardH = 140.f;
     float gap = 14.f;
     float startY = 90.f;
 
@@ -87,14 +88,30 @@ void BuildMenu::initSlots() {
         slots[i].costText.setCharacterSize(13);
         slots[i].costText.setPosition(panelX + 22, y + 68);
 
-        slots[i].btnBuild.setSize({ panelW - 44.f, 30.f });
+        float btnW = (i == 1) ? (panelW - 54.f) / 2.f - 4.f : panelW - 44.f;
+        slots[i].btnBuild.setSize({ btnW, 30.f });
         slots[i].btnBuild.setPosition(panelX + 22, y + cardH - 36);
         slots[i].btnBuild.setOutlineThickness(1.f);
 
         slots[i].btnText.setFont(font);
         slots[i].btnText.setCharacterSize(14);
         slots[i].btnText.setStyle(sf::Text::Bold);
-        slots[i].btnText.setPosition(panelX + 80, y + cardH - 30);
+        slots[i].btnText.setPosition(panelX + 30, y + cardH - 30);
+
+        // ปุ่ม RECRUIT เฉพาะ Barracks (index 1)
+        if (i == 1) {
+            float recruitX = panelX + 22 + btnW + 8.f;
+            slots[i].btnRecruit.setSize({ btnW, 30.f });
+            slots[i].btnRecruit.setPosition(recruitX, y + cardH - 36);
+            slots[i].btnRecruit.setOutlineThickness(1.f);
+            slots[i].btnRecruit.setFillColor(COL_RECRUIT);
+            slots[i].btnRecruit.setOutlineColor(sf::Color(80, 140, 220));
+
+            slots[i].btnRecruitText.setFont(font);
+            slots[i].btnRecruitText.setCharacterSize(12);
+            slots[i].btnRecruitText.setFillColor(sf::Color(150, 200, 255));
+            slots[i].btnRecruitText.setPosition(recruitX + 6, y + cardH - 30);
+        }
     }
 }
 
@@ -127,6 +144,34 @@ void BuildMenu::updateSlot(int i) {
         slots[i].btnText.setFillColor(sf::Color(200, 120, 100));
         slots[i].btnText.setString("NOT ENOUGH");
     }
+
+    // อัปเดตปุ่ม RECRUIT (เฉพาะ Barracks)
+    if (i == 1) {
+        BuildingCost rc = b.getRecruitCost();
+        bool hasBarracks = b.count > 0;
+        bool canRecruit = hasBarracks &&
+            city->getGold() >= rc.gold &&
+            city->getFood() >= rc.food;
+
+        if (!hasBarracks) {
+            slots[i].btnRecruit.setFillColor(sf::Color(40, 40, 40));
+            slots[i].btnRecruit.setOutlineColor(sf::Color(80, 80, 80));
+            slots[i].btnRecruitText.setFillColor(sf::Color(100, 100, 100));
+            slots[i].btnRecruitText.setString("No Barracks");
+        }
+        else if (canRecruit) {
+            slots[i].btnRecruit.setFillColor(COL_RECRUIT);
+            slots[i].btnRecruit.setOutlineColor(sf::Color(80, 140, 220));
+            slots[i].btnRecruitText.setFillColor(sf::Color(150, 200, 255));
+            slots[i].btnRecruitText.setString("RECRUIT");
+        }
+        else {
+            slots[i].btnRecruit.setFillColor(sf::Color(40, 40, 60));
+            slots[i].btnRecruit.setOutlineColor(sf::Color(80, 80, 120));
+            slots[i].btnRecruitText.setFillColor(sf::Color(120, 120, 160));
+            slots[i].btnRecruitText.setString("Need 20G 50F");
+        }
+    }  // [แก้] เพิ่ม } ปิด if(i==1) ที่หายไป
 }
 
 void BuildMenu::setCity(City* c) {
@@ -146,6 +191,8 @@ void BuildMenu::handleEvent(const sf::Event& event) {
         event.mouseButton.button != sf::Mouse::Left) return;
 
     sf::Vector2f mp((float)event.mouseButton.x, (float)event.mouseButton.y);
+    recruitedThisFrame = false;
+
     if (btnClose.getGlobalBounds().contains(mp)) { clear(); return; }
 
     for (int i = 0; i < 4; i++) {
@@ -163,38 +210,55 @@ void BuildMenu::handleEvent(const sf::Event& event) {
             }
             return;
         }
+
+        if (i == 1 && slots[i].btnRecruit.getGlobalBounds().contains(mp)) {
+            const Building& b = city->getBuilding(1);
+            BuildingCost rc = b.getRecruitCost();
+            if (b.count > 0 &&
+                city->getGold() >= rc.gold &&
+                city->getFood() >= rc.food)
+            {
+                city->addGold(-rc.gold);
+                city->addFood(-rc.food);
+                if (units) units->emplace_back("Swordsman", city->getR(), city->getC(), 1);
+                recruitedThisFrame = true;
+                feedbackText.setString("Swordsman recruited!");
+                feedbackText.setFillColor(sf::Color(100, 180, 255));
+                feedbackTimer = 120;
+            }
+            else {
+                feedbackText.setString("Need Barracks + 20G 50F!");
+                feedbackText.setFillColor(sf::Color(255, 80, 80));
+                feedbackTimer = 120;
+            }
+            return;
+        }
     }
 }
 
 void BuildMenu::draw(sf::RenderWindow& window) {
     if (!city) return;
 
-    float x = panelX;
-    float y = panelY;
-    float pw = panelW;
-    float ph = panelH;
-    float rad = 10.f;                // ← ความโค้งมุม (ปรับได้)
+    float x = panelX, y = panelY, pw = panelW, ph = panelH;
+    float rad = 10.f;
     sf::Color cRim = COL_RIM;
 
-    // 1. พื้นหลังทึบ
     sf::RectangleShape bgFull({ pw, ph });
     bgFull.setPosition(x, y);
     bgFull.setFillColor(COL_BG);
     window.draw(bgFull);
 
-    // 2. topbar มืด
     sf::RectangleShape tb({ pw, 54.f });
     tb.setPosition(x, y);
     tb.setFillColor(COL_TOPBAR);
     window.draw(tb);
 
-    // 3. เส้นคั่นใต้ topbar
     sf::RectangleShape tbDiv({ pw - 20.f, 1.f });
     tbDiv.setPosition(x + 10.f, y + 54.f);
     tbDiv.setFillColor(sf::Color(160, 130, 45, 150));
     window.draw(tbDiv);
 
-    // 4. ขอบโค้งมนสีทอง — วาดสุดท้ายเสมอ ไม่โดนทับ
+    // ขอบโค้งมนสีทอง
     sf::VertexArray ol(sf::LineStrip, 9);
     ol[0] = { {x + rad,      y},            cRim };
     ol[1] = { {x + pw - rad, y},            cRim };
@@ -207,12 +271,10 @@ void BuildMenu::draw(sf::RenderWindow& window) {
     ol[8] = { {x + rad,      y},            cRim };
     window.draw(ol);
 
-    // 5. ข้อความ BUILD MENU และปุ่ม X
     window.draw(labelTitle);
     window.draw(btnClose);
     window.draw(btnCloseText);
 
-    // 6. stockpile ใต้ topbar
     sf::Text stockText;
     stockText.setFont(font);
     stockText.setCharacterSize(15);
@@ -225,7 +287,6 @@ void BuildMenu::draw(sf::RenderWindow& window) {
     stockText.setPosition(panelX + 18, panelY + 62);
     window.draw(stockText);
 
-    // 7. card แต่ละอัน
     for (int i = 0; i < 4; i++) {
         updateSlot(i);
         window.draw(slots[i].card);
@@ -235,9 +296,13 @@ void BuildMenu::draw(sf::RenderWindow& window) {
         window.draw(slots[i].costText);
         window.draw(slots[i].btnBuild);
         window.draw(slots[i].btnText);
+
+        if (i == 1) {
+            window.draw(slots[i].btnRecruit);
+            window.draw(slots[i].btnRecruitText);
+        }
     }
 
-    // 8. feedback
     if (feedbackTimer > 0) {
         feedbackText.setPosition(panelX + 18, panelY + panelH - 40);
         window.draw(feedbackText);
