@@ -481,9 +481,6 @@ int main() {
         worldMap.drawCities(window);
 
         // 4. วาดทหารทับเมืองสุดท้าย
-        for (auto& unit : units) {
-            unit.draw(window);
-        }
         worldMap.drawCities(window);
         for (auto& unit : units) {
             if (unit.getOwner() == 1) {
