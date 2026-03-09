@@ -30,6 +30,31 @@ void GameMap::loadTextures() {
 
     texturesLoaded = true;
     std::cout << "Textures loaded!\n";
+
+    // เปรมทำ - โหลด building textures
+    buildingTexturesLoaded = true;
+    if (!texVillage.loadFromFile("villeage.jpg")) {
+        std::cout << "ERROR: villeage.jpg not found!\n";
+        buildingTexturesLoaded = false;
+    }
+    if (!texBarracks.loadFromFile("barracks.png")) {
+        std::cout << "ERROR: barracks.png not found!\n";
+        buildingTexturesLoaded = false;
+    }
+    if (!texRestaurant.loadFromFile("restaurant.jpg")) {
+        std::cout << "ERROR: restaurant.jpg not found!\n";
+        buildingTexturesLoaded = false;
+    }
+    if (!texLumbermill.loadFromFile("lumbermill.jpg")) {
+        std::cout << "ERROR: lumbermill.jpg not found!\n";
+        buildingTexturesLoaded = false;
+    }
+    texVillage.setSmooth(true);
+    texBarracks.setSmooth(true);
+    texRestaurant.setSmooth(true);
+    texLumbermill.setSmooth(true);
+    if (buildingTexturesLoaded) std::cout << "Building textures loaded!\n";
+    // เปรมทำ - จบ
 }
 
 sf::Texture* GameMap::pickTexture(const HexTile& tile) {
@@ -432,10 +457,13 @@ void GameMap::updateHighlight(sf::Vector2f mousePos) {
 }
 
 void GameMap::draw(sf::RenderWindow& window) {
+    // 1. วาด hex พื้น
     for (const auto& tile : tiles) window.draw(tile.shape);
 
+    // 2. วาดเมือง
     drawCities(window);
 
+    // 3. วาดไฮไลท์เส้นทาง
     for (const auto& tile : tiles) {
         if (tile.isPath) {
             sf::ConvexShape h = tile.shape;
@@ -447,24 +475,63 @@ void GameMap::draw(sf::RenderWindow& window) {
         }
     }
 
+    // เปรมทำ - 4. วาด building รูปภาพเต็ม hex
     for (const auto& tile : tiles) {
         if (tile.buildingType < 0) continue;
         if (!tile.isVisible) continue;
 
-        sf::FloatRect b = tile.shape.getGlobalBounds();
-        float cx = b.left + b.width / 2.f;
-        float cy = b.top + b.height / 2.f;
+        sf::Texture* bTex = nullptr;
+        if (buildingTexturesLoaded) {
+            switch (tile.buildingType) {
+            case 0: bTex = &texVillage;    break;
+            case 1: bTex = &texBarracks;   break;
+            case 2: bTex = &texRestaurant; break;
+            case 3: bTex = &texLumbermill; break;
+            }
+        }
 
-        const float SZ = 12.f;
-        sf::RectangleShape icon(sf::Vector2f(SZ, SZ));
-        icon.setOrigin(SZ / 2.f, SZ / 2.f);
-        icon.setPosition(cx, cy);
-        icon.setFillColor(getBuildingColor(tile.buildingType));
-        icon.setOutlineColor(sf::Color(0, 0, 0, 180));
-        icon.setOutlineThickness(1.5f);
-        window.draw(icon);
+        if (bTex && bTex->getSize().x > 0) {
+            sf::ConvexShape buildingHex = tile.shape;
+            buildingHex.setTexture(bTex);
+            buildingHex.setFillColor(sf::Color(255, 255, 255, 230));
+
+            sf::Vector2u texSize = bTex->getSize();
+            sf::FloatRect bounds = tile.shape.getGlobalBounds();
+            float hexW = bounds.width;
+            float hexH = bounds.height;
+
+            float scaleX = (float)texSize.x / hexW;
+            float scaleY = (float)texSize.y / hexH;
+            float scale = std::min(scaleX, scaleY);
+
+            int cropW = (int)(hexW * scale);
+            int cropH = (int)(hexH * scale);
+            int offsetX = ((int)texSize.x - cropW) / 2;
+            int offsetY = ((int)texSize.y - cropH) / 2;
+
+            buildingHex.setTextureRect(sf::IntRect(offsetX, offsetY, cropW, cropH));
+            buildingHex.setOutlineColor(sf::Color(255, 215, 0, 200));
+            buildingHex.setOutlineThickness(2.f);
+            window.draw(buildingHex);
+        }
+        else {
+            // fallback สีถ้า texture โหลดไม่ได้
+            sf::FloatRect b = tile.shape.getGlobalBounds();
+            float cx = b.left + b.width / 2.f;
+            float cy = b.top + b.height / 2.f;
+            const float SZ = 12.f;
+            sf::RectangleShape icon(sf::Vector2f(SZ, SZ));
+            icon.setOrigin(SZ / 2.f, SZ / 2.f);
+            icon.setPosition(cx, cy);
+            icon.setFillColor(getBuildingColor(tile.buildingType));
+            icon.setOutlineColor(sf::Color(0, 0, 0, 180));
+            icon.setOutlineThickness(1.5f);
+            window.draw(icon);
+        }
     }
+    // เปรมทำ - จบ
 
+    // 5. วาด hover highlight
     for (const auto& tile : tiles) {
         if (tile.isHovered && tile.isExplored) {
             sf::ConvexShape h = tile.shape;

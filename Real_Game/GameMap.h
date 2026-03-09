@@ -11,10 +11,10 @@ const float HEX_SIZE = 30.0f;
 
 inline sf::Color getBuildingColor(int buildingTypeIdx) {
     switch (buildingTypeIdx) {
-    case 0: return sf::Color(255, 210, 50);  // Village    — ทอง
-    case 1: return sf::Color(210, 60, 60);   // Barracks   — แดง
-    case 2: return sf::Color(220, 130, 50);  // Restaurant — ส้ม
-    case 3: return sf::Color(80, 180, 80);   // Lumbermill — เขียว
+    case 0: return sf::Color(255, 210, 50);
+    case 1: return sf::Color(210, 60, 60);
+    case 2: return sf::Color(220, 130, 50);
+    case 3: return sf::Color(80, 180, 80);
     }
     return sf::Color::White;
 }
@@ -58,7 +58,6 @@ public:
     void foundCity(int r, int c);
     int getExploredTileCount() const;
     int getTotalLandTileCount() const;
-
     void placeBuildingOnTile(int r, int c, int buildingTypeIdx) {
         HexTile* t = getTile(r, c);
         if (t) t->buildingType = buildingTypeIdx;
@@ -73,16 +72,23 @@ private:
     bool m_gameStarted = false;
     ResourceYield m_starterPack;
 
-    // เปรมทำ - Textures
+    // Terrain textures
     sf::Texture texGrass1, texGrass2;
     sf::Texture texForest1, texForest2;
     sf::Texture texWater;
     sf::Texture texStone1, texStone2, texStone3;
     bool texturesLoaded = false;
-    void loadTextures();
-    sf::Texture* pickTexture(const HexTile& tile);
+
+    // เปรมทำ - Building textures
+    sf::Texture texVillage;
+    sf::Texture texBarracks;
+    sf::Texture texRestaurant;
+    sf::Texture texLumbermill;
+    bool buildingTexturesLoaded = false;
     // เปรมทำ - จบ
 
+    void loadTextures();
+    sf::Texture* pickTexture(const HexTile& tile);
     sf::ConvexShape createHexShape(float x, float y, TerrainType type);
     void createCluster(TerrainType type, int startR, int startC, int clusterSize);
     void updateColors();

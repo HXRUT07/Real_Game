@@ -160,5 +160,17 @@
     <Image Include="C:\Users\USER\Downloads\redgoblin.png">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="C:\Users\USER\Downloads\lumbermill.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="C:\Users\USER\Downloads\restaurant.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="C:\Users\USER\Downloads\villeage.jpg">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="C:\Users\USER\Downloads\barracks.png">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>
