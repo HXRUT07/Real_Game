@@ -107,15 +107,30 @@ int main() {
     Unit* leadUnit = nullptr;
     City* activeCityUI = nullptr;
 
+    int hoverR = -1, hoverC = -1;
+
     AIManager aiManager;
 
     while (window.isOpen()) {
         sf::Vector2f mousePosScreen = window.mapPixelToCoords(sf::Mouse::getPosition(window));
         sf::Event event;
 
+        {
+            sf::Vector2f worldPos = window.mapPixelToCoords(sf::Mouse::getPosition(window), camera.getView());
+            int hr = 0, hc = 0;
+            if (worldMap.getGridCoords(worldPos, hr, hc)) { hoverR = hr; hoverC = hc; }
+            else { hoverR = -1; hoverC = -1; }
+        }
+
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) window.close();
-            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) window.close();
+            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) {
+                if (buildMenu.isPendingTileSelect()) {
+                    buildMenu.cancelTileSelect();
+                    continue;
+                }
+                window.close();
+            }
             // [DEBUG] F5 = force win
             if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::F5) {
                 playerWon = true;
@@ -140,52 +155,72 @@ int main() {
                 sf::Vector2f worldPos = window.mapPixelToCoords(pixelPos, camera.getView());
                 sf::Vector2f uiPos = window.mapPixelToCoords(pixelPos, window.getDefaultView());
 
-                if (gui.isSidePanelVisible() && uiPos.x > window.getSize().x - 220.f) {
-                    if (gui.isModeButtonClicked(uiPos)) {
-                        gui.toggleArmyMode();
-                        sndClick.play();
-                        continue;
+                // ===== PLACEMENT MODE: คลิกบนแผนที่เพื่อวางสิ่งก่อสร้าง =====
+                if (buildMenu.isPendingTileSelect() && event.mouseButton.button == sf::Mouse::Left) {
+                    // ถ้าคลิกในพื้นที่ panel → BuildMenu.handleEvent จัดการเอง ข้ามไป
+                    sf::FloatRect panelArea(8.f, 8.f, 320.f, window.getSize().y - 16.f);
+                    if (!panelArea.contains(uiPos)) {
+                        int r = 0, c = 0;
+                        if (worldMap.getGridCoords(worldPos, r, c)) {
+                            HexTile* ft = worldMap.getTile(r, c);
+                            City* myCity = worldMap.getFirstCity();
+                            int bidx = buildMenu.getPendingBuildIdx();
+
+                            // เงื่อนไข: tile ต้องถูกเปิดเผย และไม่มีเมืองทับ
+                            bool validTile = ft && ft->isVisible &&
+                                ft->type != TerrainType::Water &&
+                                worldMap.getCityAt(r, c) == nullptr;
+
+                            if (validTile && myCity && myCity->canBuild(bidx)) {
+                                myCity->build(bidx);
+                                worldMap.placeBuildingOnTile(r, c, bidx);
+                                buildMenu.confirmTileSelect(true);
+                                sndClick.play();
+                                std::cout << "Building placed at " << r << "," << c << std::endl;
+                            }
+                            else {
+                                buildMenu.confirmTileSelect(false);
+                            }
+                        }
+                        else {
+                            buildMenu.cancelTileSelect();
+                        }
                     }
-                    int clickedIdx = gui.getClickedItemIndex(uiPos);
-                    if (clickedIdx != -1) {
-                        gui.setSelectedIndex(clickedIdx);
-                        leadUnit = currentStack[clickedIdx];
-                        worldMap.clearHighlight();
-                        worldMap.calculateValidMoves(leadUnit->getR(), leadUnit->getC(), leadUnit->getMoveRange());
-                        sndClick.play();
-                        continue;
-                    }
+                    continue; // กันไม่ให้ logic ล่างทำงานระหว่าง placement
                 }
 
                 if (event.mouseButton.button == sf::Mouse::Right) {
-                    gui.clearSelection(); leadUnit = nullptr; currentStack.clear(); worldMap.clearHighlight();
-                    activeCityUI = nullptr;
+                    // ถ้ากำลัง placement mode → ยกเลิก (buildMenu.handleEvent จัดการแล้ว)
+                    if (!buildMenu.isPendingTileSelect()) {
+                        gui.clearSelection(); leadUnit = nullptr; currentStack.clear(); worldMap.clearHighlight();
+                        activeCityUI = nullptr;
 
-                    int r = 0, c = 0;
-                    if (worldMap.getGridCoords(worldPos, r, c)) {
-                        City* clickedCity = worldMap.getCityAt(r, c);
-                        if (clickedCity != nullptr) {
-                            activeCityUI = clickedCity;
-                            cityPanel.setCity(clickedCity);
-                            gui.hideInfo();
-                        }
-                        else {
-                            cityPanel.clear();
-                            HexTile* clickedTile = worldMap.getTile(r, c);
-                            if (clickedTile != nullptr && clickedTile->isExplored) {
-                                std::string tName = "TILE";
-                                switch (clickedTile->type) {
-                                case TerrainType::Grass:    tName = "GRASSLAND";  break;
-                                case TerrainType::Forest:   tName = "FOREST";     break;
-                                case TerrainType::Mountain: tName = "MOUNTAIN";   break;
-                                case TerrainType::Water:    tName = "WATER";      break;
-                                case TerrainType::City:     tName = "CITY";       break;
-                                }
-                                gui.showResourcePanel((float)window.getSize().x,
-                                    clickedTile->gold, clickedTile->wood, clickedTile->food, tName);
+                        int r = 0, c = 0;
+                        if (worldMap.getGridCoords(worldPos, r, c)) {
+                            City* clickedCity = worldMap.getCityAt(r, c);
+                            if (clickedCity != nullptr) {
+                                activeCityUI = clickedCity;
+                                cityPanel.setCity(clickedCity);
+                                gui.hideInfo();
                             }
                             else {
-                                gui.hideInfo();
+                                cityPanel.clear();
+                                HexTile* clickedTile = worldMap.getTile(r, c);
+                                if (clickedTile != nullptr && clickedTile->isExplored) {
+                                    std::string tName = "TILE";
+                                    switch (clickedTile->type) {
+                                    case TerrainType::Grass:    tName = "GRASSLAND";  break;
+                                    case TerrainType::Forest:   tName = "FOREST";     break;
+                                    case TerrainType::Mountain: tName = "MOUNTAIN";   break;
+                                    case TerrainType::Water:    tName = "WATER";      break;
+                                    case TerrainType::City:     tName = "CITY";       break;
+                                    }
+                                    gui.showResourcePanel((float)window.getSize().x,
+                                        clickedTile->gold, clickedTile->wood, clickedTile->food, tName);
+                                }
+                                else {
+                                    gui.hideInfo();
+                                }
                             }
                         }
                     }
@@ -477,13 +512,30 @@ int main() {
             }
         }
 
+        if (buildMenu.isPendingTileSelect() && hoverR != -1 && hoverC != -1) {
+            HexTile* hoverTile = worldMap.getTile(hoverR, hoverC);
+            if (hoverTile && hoverTile->isVisible) {
+                // ตรวจว่าวางได้หรือไม่
+                bool canPlace = hoverTile->type != TerrainType::Water &&
+                    worldMap.getCityAt(hoverR, hoverC) == nullptr;
+
+                sf::ConvexShape previewHex = hoverTile->shape;
+                if (canPlace) {
+                    previewHex.setFillColor(sf::Color(100, 220, 255, 120));  // ฟ้า = วางได้
+                    previewHex.setOutlineColor(sf::Color(100, 220, 255, 220));
+                }
+                else {
+                    previewHex.setFillColor(sf::Color(255, 60, 60, 120));    // แดง = วางไม่ได้
+                    previewHex.setOutlineColor(sf::Color(255, 60, 60, 220));
+                }
+                previewHex.setOutlineThickness(3.0f);
+                window.draw(previewHex);
+            }
+        }
         // 3. วาดเมืองก่อน
         worldMap.drawCities(window);
 
         // 4. วาดทหารทับเมืองสุดท้าย
-        for (auto& unit : units) {
-            unit.draw(window);
-        }
         worldMap.drawCities(window);
         for (auto& unit : units) {
             if (unit.getOwner() == 1) {

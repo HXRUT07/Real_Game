@@ -52,6 +52,11 @@ BuildMenu::BuildMenu(float winW, float winH) {
     feedbackText.setCharacterSize(13);
     feedbackText.setFillColor(sf::Color(100, 255, 100));
 
+    placementHintText.setFont(font);
+    placementHintText.setCharacterSize(14);
+    placementHintText.setFillColor(sf::Color(100, 220, 255));
+    placementHintText.setPosition(panelX + 18, panelY + panelH - 80);
+
     initSlots();
 }
 
@@ -133,7 +138,13 @@ void BuildMenu::updateSlot(int i) {
     slots[i].costText.setString(costStr);
     slots[i].costText.setFillColor(canAfford ? sf::Color(200, 180, 100) : sf::Color(220, 80, 80));
 
-    if (canAfford) {
+    if (pendingBuildIdx == i) {
+        slots[i].btnBuild.setFillColor(COL_BTN_WAIT);
+        slots[i].btnBuild.setOutlineColor(sf::Color(80, 160, 255));
+        slots[i].btnText.setFillColor(sf::Color(150, 210, 255));
+        slots[i].btnText.setString("PLACING...");
+    }
+    else if (canAfford) {
         slots[i].btnBuild.setFillColor(COL_BTN_OK);
         slots[i].btnBuild.setOutlineColor(sf::Color(100, 180, 60));
         slots[i].btnText.setFillColor(sf::Color(180, 255, 120));
@@ -184,6 +195,7 @@ void BuildMenu::setCity(City* c) {
 void BuildMenu::clear() {
     city = nullptr;
     feedbackTimer = 0;
+    pendingBuildIdx = -1;
 }
 
 void BuildMenu::handleEvent(const sf::Event& event) {
@@ -194,15 +206,41 @@ void BuildMenu::handleEvent(const sf::Event& event) {
     sf::Vector2f mp((float)event.mouseButton.x, (float)event.mouseButton.y);
     recruitedThisFrame = false;
 
-    if (btnClose.getGlobalBounds().contains(mp)) { clear(); return; }
+    // Right-click ยกเลิก placement mode
+    if (event.mouseButton.button == sf::Mouse::Right) {
+        if (pendingBuildIdx != -1) {
+            cancelTileSelect();
+        }
+        return;
+    }
+
+    if (event.mouseButton.button != sf::Mouse::Left) return;
+
+    // ถ้ากำลัง placement mode และคลิกนอก panel → ให้ main.cpp จัดการ 
+    sf::FloatRect panelBounds(panelX, panelY, panelW, panelH);
+    if (pendingBuildIdx != -1 && !panelBounds.contains(mp)) {
+        return; // main.cpp จะรับ event นี้แทน
+    }
+
+    if (btnClose.getGlobalBounds().contains(mp)) {
+        pendingBuildIdx = -1;
+        clear();
+        return;
+    }
 
     for (int i = 0; i < 4; i++) {
         if (slots[i].btnBuild.getGlobalBounds().contains(mp)) {
-            if (city->build(i)) {
-                lastBuiltIdx = i;
-                feedbackText.setString("Built: " + city->getBuilding(i).getName() + "!");
-                feedbackText.setFillColor(sf::Color(100, 255, 100));
-                feedbackTimer = 120;
+            if (pendingBuildIdx == i) {
+                // กดซ้ำ → ยกเลิก placement
+                cancelTileSelect();
+                return;
+            }
+            if (city->canBuild(i)) {
+                // เข้า placement mode — รอผู้ใช้คลิกแผนที่
+                pendingBuildIdx = i;
+                feedbackText.setString("Click on map to place!");
+                feedbackText.setFillColor(sf::Color(100, 220, 255));
+                feedbackTimer = 300;
             }
             else {
                 feedbackText.setString("Not enough resources!");
@@ -235,6 +273,29 @@ void BuildMenu::handleEvent(const sf::Event& event) {
             return;
         }
     }
+}
+
+void BuildMenu::confirmTileSelect(bool success) {
+    if (success) {
+        const Building& b = city->getBuilding(pendingBuildIdx);
+        feedbackText.setString("Built: " + b.getName() + "!");
+        feedbackText.setFillColor(sf::Color(100, 255, 100));
+        lastBuiltIdx = pendingBuildIdx;
+        feedbackTimer = 180;
+    }
+    else {
+        feedbackText.setString("Cannot build here!");
+        feedbackText.setFillColor(sf::Color(255, 80, 80));
+        feedbackTimer = 120;
+    }
+    pendingBuildIdx = -1;
+}
+
+void BuildMenu::cancelTileSelect() {
+    pendingBuildIdx = -1;
+    feedbackText.setString("Placement cancelled.");
+    feedbackText.setFillColor(sf::Color(200, 200, 100));
+    feedbackTimer = 90;
 }
 
 void BuildMenu::draw(sf::RenderWindow& window) {
@@ -272,6 +333,9 @@ void BuildMenu::draw(sf::RenderWindow& window) {
     ol[8] = { {x + rad,      y},            cRim };
     window.draw(ol);
 
+    labelTitle.setString(pendingBuildIdx != -1
+        ? "SELECT LOCATION"
+        : "BUILD MENU");
     window.draw(labelTitle);
     window.draw(btnClose);
     window.draw(btnCloseText);
@@ -302,6 +366,12 @@ void BuildMenu::draw(sf::RenderWindow& window) {
             window.draw(slots[i].btnRecruit);
             window.draw(slots[i].btnRecruitText);
         }
+    }
+    if (pendingBuildIdx != -1) {
+        placementHintText.setString(
+            "Click tile to place\n[Right-click] Cancel"
+        );
+        window.draw(placementHintText);
     }
 
     if (feedbackTimer > 0) {
