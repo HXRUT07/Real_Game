@@ -17,7 +17,7 @@ namespace Pal {
     const sf::Color TrackBg{ 50, 42, 30,255 };
     const sf::Color TrackFill{ 180,145, 55,255 };
     const sf::Color Subtitle{ 160,145,100,180 };
-    const sf::Color CreditName{ 230,215,175,255 };
+    const sf::Color CreditName{ 230, 215, 175, 255 };
 }
 
 static float lerpF(float a, float b, float t) { return a + (b - a) * t; }
@@ -319,12 +319,15 @@ void MainMenu::buildCreditsUI() {
 
     struct CL { std::string t; bool role; };
     const std::vector<CL> lines = {
-        {"GAME DESIGN",true},{"KUY1",false},{"",false},
-        {"PROGRAMMING",true},{"KUY2",false},{"KUY3",false},{"",false},
-        {"ART & ASSETS",true},{"KUY4",false},{"",false},
-        {"MUSIC & SOUND",true},{"KUY5",false},{"",false},
-        {"SPECIAL THANKS",true},{"Everyone who played",false},{"and gave feedback",false},{"",false},
-        {"KUY HEE MHA",true},{"",false}
+        {"",true},
+        {"PROJECT TEAM",true},{"",true},
+                              {"Nithit Boonlert 680610763",false},{"",true},
+                              {"Nipasiri Saephoei 680610764",false},{"",true},
+                              {"Paniti Lertvijitsub 680610766",false},{"",true},
+                              {"Piyarad thammachaisu 680610769",false},{"",true},
+                              {"Ratchaphum Sootthasil 680610787",false},{"",true},
+        {"SPECIAL THANKS",true},{"",true},
+        {"Everyone who played",false},{"and gave feedback",false},{"Thank you for playing this game",false},{"",false},
     };
     m_creditsLines.clear();
     float cx = m_crePX + m_crePW / 2.f;
@@ -334,7 +337,7 @@ void MainMenu::buildCreditsUI() {
         t.setFont(m_font);
         t.setString(lines[i].t);
         if (lines[i].role) { t.setCharacterSize(static_cast<unsigned>(m_H * 0.026f)); t.setLetterSpacing(2.5f); t.setFillColor(Pal::Gold); }
-        else { t.setCharacterSize(static_cast<unsigned>(m_H * 0.023f)); t.setFillColor(Pal::CreditName); }
+        else { t.setCharacterSize(static_cast<unsigned>(m_H * 0.025f)); t.setLetterSpacing(2.5f); t.setFillColor(Pal::CreditName); }
         centerText(t, cx, sy + lh * i);
         m_creditsLines.push_back(std::move(t));
     }
