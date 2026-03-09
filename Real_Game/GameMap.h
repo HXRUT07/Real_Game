@@ -56,6 +56,9 @@ public:
     City* getCityAt(int r, int c);
     ResourceYield getStarterPackValues() const { return m_starterPack; }
     void foundCity(int r, int c);
+    int getExploredTileCount() const;
+    int getTotalLandTileCount() const;
+
     void placeBuildingOnTile(int r, int c, int buildingTypeIdx) {
         HexTile* t = getTile(r, c);
         if (t) t->buildingType = buildingTypeIdx;
