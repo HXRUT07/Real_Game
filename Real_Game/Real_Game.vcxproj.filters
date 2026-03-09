@@ -154,5 +154,11 @@
     <Image Include="C:\Users\USER\Downloads\blueknight.png">
       <Filter>Resource Files</Filter>
     </Image>
+    <Image Include="C:\Users\USER\Downloads\armygoblin.png">
+      <Filter>Resource Files</Filter>
+    </Image>
+    <Image Include="C:\Users\USER\Downloads\redgoblin.png">
+      <Filter>Resource Files</Filter>
+    </Image>
   </ItemGroup>
 </Project>
