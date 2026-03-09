@@ -505,3 +505,17 @@ City* GameMap::getCityAt(int r, int c) {
     }
     return nullptr;
 }
+
+int GameMap::getExploredTileCount() const {
+    int count = 0;
+    for (const auto& tile : tiles)
+        if (tile.isExplored && tile.type != TerrainType::Water) count++;
+    return count;
+}
+
+int GameMap::getTotalLandTileCount() const {
+    int count = 0;
+    for (const auto& tile : tiles)
+        if (tile.type != TerrainType::Water) count++;
+    return count;
+}

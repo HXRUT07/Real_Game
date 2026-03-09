@@ -96,6 +96,8 @@ int main() {
 
     Unit* selectedUnit = nullptr;
     bool isGameRunning = false;
+    bool playerWon = false;
+    int  exploredAtWin = 0, totalLandAtWin = 0;
     int unitNameCounter = 1;
     TurnManager turnSys(2);
 
@@ -114,6 +116,17 @@ int main() {
         while (window.pollEvent(event)) {
             if (event.type == sf::Event::Closed) window.close();
             if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::Escape) window.close();
+            // [DEBUG] F5 = force win
+            if (event.type == sf::Event::KeyPressed && event.key.code == sf::Keyboard::F5) {
+                playerWon = true;
+                exploredAtWin = worldMap.getExploredTileCount();
+                totalLandAtWin = worldMap.getTotalLandTileCount();
+                for (int r = 0; r < 50; r++)
+                    for (int c = 0; c < 50; c++) {
+                        HexTile* t = worldMap.getTile(r, c);
+                        if (t) { t->isExplored = true; t->isVisible = true; }
+                    }
+            }
 
             cityPanel.handleEvent(event);
             buildMenu.handleEvent(event);
@@ -419,6 +432,22 @@ int main() {
 
         if (isGameRunning) {
             worldMap.updateVision(units, 1);
+            // ===== ตรวจเงื่อนไขชนะ =====
+            if (!playerWon) {
+                int explored = worldMap.getExploredTileCount();
+                int total = worldMap.getTotalLandTileCount();
+                if (total > 0 && explored >= total) {
+                    playerWon = true;
+                    exploredAtWin = explored;
+                    totalLandAtWin = total;
+                    // เปิดแมพทั้งหมดให้เห็น
+                    for (int r = 0; r < 50; r++)
+                        for (int c = 0; c < 50; c++) {
+                            HexTile* t = worldMap.getTile(r, c);
+                            if (t) { t->isExplored = true; t->isVisible = true; }
+                        }
+                }
+            }
         }
 
         // เปรมทำ - อัปเดตเมฆ
@@ -486,7 +515,7 @@ int main() {
             sndMove.play();
             buildMenu.clearRecruit();
         }
-       
+
 
         combatSys.updateAndDraw(window, units, worldMap, sndDice, sndHit);
 
@@ -494,6 +523,47 @@ int main() {
         window.setView(window.getDefaultView());
         cloudSystem.draw(window, camera.getZoomLevel());
         // เปรมทำ - จบ
+
+        // ===== Win Screen =====
+        if (playerWon) {
+            window.setView(window.getDefaultView());
+            sf::RectangleShape overlay(sf::Vector2f(window.getSize().x, window.getSize().y));
+            overlay.setFillColor(sf::Color(0, 0, 0, 180));
+            window.draw(overlay);
+
+            sf::Font& winFont = combatFont;
+
+            sf::Text bigTitle("YOU WIN!", winFont, 90);
+            bigTitle.setFillColor(sf::Color(255, 215, 0));
+            bigTitle.setStyle(sf::Text::Bold);
+            bigTitle.setPosition(
+                window.getSize().x / 2.f - bigTitle.getLocalBounds().width / 2.f,
+                window.getSize().y / 2.f - 180.f);
+            window.draw(bigTitle);
+
+            sf::Text subTitle("Map Fully Explored!", winFont, 40);
+            subTitle.setFillColor(sf::Color(200, 240, 200));
+            subTitle.setPosition(
+                window.getSize().x / 2.f - subTitle.getLocalBounds().width / 2.f,
+                window.getSize().y / 2.f - 60.f);
+            window.draw(subTitle);
+
+            std::string statsStr = std::to_string(exploredAtWin) + " / " + std::to_string(totalLandAtWin) + " tiles explored";
+            sf::Text stats(statsStr, winFont, 28);
+            stats.setFillColor(sf::Color(180, 180, 180));
+            stats.setPosition(
+                window.getSize().x / 2.f - stats.getLocalBounds().width / 2.f,
+                window.getSize().y / 2.f + 10.f);
+            window.draw(stats);
+
+            sf::Text hint("Press ESC to exit", winFont, 24);
+            hint.setFillColor(sf::Color(140, 140, 140));
+            hint.setPosition(
+                window.getSize().x / 2.f - hint.getLocalBounds().width / 2.f,
+                window.getSize().y / 2.f + 80.f);
+            window.draw(hint);
+        }
+        // =======================
 
         window.display();
     }
