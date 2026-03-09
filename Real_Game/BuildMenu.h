@@ -29,6 +29,7 @@ public:
     void confirmTileSelect(bool success); // เรียกจาก main หลังคลิก tile
     void cancelTileSelect();              // เรียกเมื่อ right-click หรือยกเลิก
 
+
 private:
     City* city = nullptr;
     std::vector<Unit>* units = nullptr;
@@ -60,6 +61,7 @@ private:
 
     // feedback
     sf::Text feedbackText;
+    sf::Text placementHintText;
     int feedbackTimer = 0;
     int lastBuiltIdx = -1;
     bool recruitedThisFrame = false;
